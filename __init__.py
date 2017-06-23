@@ -3,7 +3,7 @@
 
 def info():
     import sys, os
-    print( "┌── PINE TOOLKIT ───────────────────────────────────────────────────────────")
+    print( "┌── PINES TOOLKIT ──────────────────────────────────────────────────────────")
     v = '\n│'.join(sys.version.split('\n'))
     print(f"│Python {v}")
     print(f"│EXE ─ {sys.executable}")

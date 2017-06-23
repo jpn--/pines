@@ -15,14 +15,14 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-    name='pine',
+    name='pines',
     version='1.0',
 
     description='A toolkit for various purposes',
     long_description=long_description,
 
     # The project's main homepage.
-    url='https://github.com/jpn--/pine',
+    url='https://github.com/jpn--/pines',
 
     # Author details
     author='Jeffrey Newman',

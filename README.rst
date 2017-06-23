@@ -1,5 +1,5 @@
-pine
-====
+pines
+=====
 
-These reusable code bits are not dead, they are just pining for the fjords.
+These collection of reusable code bits is not dead, it just pines for the fjords.
 
