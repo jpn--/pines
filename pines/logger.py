@@ -159,20 +159,32 @@ class Flogger:
 		self.logger = logger
 		self.buffer = ""
 		self.indenter = indenter
-	def __call__(self, base="", *args, end="\n", **kwargs):
+	def __call__(self, base="", *args, end="\n", lvl=50, **kwargs):
 		if end=="\n":
-			
 			if isinstance(base,str) and "{" in base:
 				out_str = self.buffer + base.format(*args,**kwargs)
 			else:
 				out_str = self.buffer + " ".join( str(i) for i in (base,)+args )
-			self.logger.critical(out_str.replace('\n','\n'+' '*self.indenter))
+			self.logger.log(lvl, out_str.replace('\n','\n'+' '*self.indenter))
 			self.buffer = ""
 		else:
 			if isinstance(base,str) and "{" in base:
 				self.buffer += base.format(*args,**kwargs)
 			else:
 				self.buffer += " ".join( str(i) for i in (base,)+args )
+	def critical(self, base="", *args, end="\n", **kwargs):
+		return self(base, *args, end=end, lvl=50, **kwargs)
+	def error(self, base="", *args, end="\n", **kwargs):
+		return self(base, *args, end=end, lvl=40, **kwargs)
+	def warn(self, base="", *args, end="\n", **kwargs):
+		return self(base, *args, end=end, lvl=30, **kwargs)
+	def info(self, base="", *args, end="\n", **kwargs):
+		return self(base, *args, end=end, lvl=20, **kwargs)
+	def debug(self, base="", *args, end="\n", **kwargs):
+		return self(base, *args, end=end, lvl=10, **kwargs)
+
+
+
 
 def flogger(level=-1, label="π", *, filename=None, file_fmt='[%(name)8s] %(message)s'):
 	"This returns a formatted logger that accepts new-style formatting, and sets logging to maximum"
