@@ -119,7 +119,7 @@ def spew(level=10):
 
 _easy_logger = None
 
-def easy(level=-1, label="", *, filename=None, file_fmt='[%(name)s] %(message)s'):
+def easy(level=-1, label="π", *, filename=None, file_fmt='[%(name)s] %(message)s'):
 	global _easy_logger
 	if file_fmt is None:
 		file_fmt = _mess_format
@@ -139,7 +139,7 @@ def easy(level=-1, label="", *, filename=None, file_fmt='[%(name)s] %(message)s'
 	if level>0: setLevel(level)
 	return getLogger(label).critical
 
-def easy_debug(label=""):
+def easy_debug(label="π"):
 	global _easy_logger
 	if _easy_logger is None:
 		log_to_stream()
@@ -186,7 +186,9 @@ class Flogger:
 
 
 
-def flogger(level=-1, label="π", *, filename=None, file_fmt='[%(name)8s] %(message)s'):
+def flogger(level=-1, label="π", *, filename=None, file_fmt='[%(name)8s] %(message)s', threshold=None):
 	"This returns a formatted logger that accepts new-style formatting, and sets logging to maximum"
 	easy(level=level, label=label, filename=filename, file_fmt=file_fmt)
+	if threshold:
+		pines_log_level(threshold, silently=True)
 	return Flogger(getLogger(label))
