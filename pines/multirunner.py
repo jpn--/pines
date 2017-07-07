@@ -1,7 +1,4 @@
-
-
 import os
-import sys
 import traceback
 import concurrent.futures as cf
 
@@ -10,9 +7,9 @@ def _spin_up_single_thread(work_func, cfgs, log, pass_n):
 	if log is not None: log('=== pines.multirunner.spin_up [single thread] begins ===')
 	for n,cfg in enumerate(cfgs):
 		if pass_n:
-			work(cfg, n)
+			work_func(cfg, n)
 		else:
-			work(cfg)
+			work_func(cfg)
 	if log is not None: log('=== pines.multirunner.spin_up [single thread] begins ===')
 
 
