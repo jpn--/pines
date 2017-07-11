@@ -82,7 +82,7 @@ except NameError:
 def default_formatter():
 	return logging.Formatter(fmt=_mess_format,datefmt=_time_format)
 
-def log_to_file(filename, residual=None, overwrite=False, *, fmt=None, datefmt=None):
+def log_to_file(filename, residual=None, overwrite=False, *, fmt=None, datefmt=None, encoding=None):
 	global fileHandler
 	if fileHandler:
 		fileHandler.flush()
@@ -99,7 +99,7 @@ def log_to_file(filename, residual=None, overwrite=False, *, fmt=None, datefmt=N
 		f.write(residual)
 		f.close()
 		mode = 'a'
-	fileHandler = logging.FileHandler(filename, mode)
+	fileHandler = logging.FileHandler(filename, mode, encoding=encoding)
 	if fmt is None:
 		fmt=_mess_format
 	if datefmt is None:
