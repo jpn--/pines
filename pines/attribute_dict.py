@@ -57,3 +57,26 @@ class quickdot(dict):
 			self[key] = z = quickdot()
 			return z
 		return super().__getitem__(key)
+
+
+class fdict(dicta):
+	def __init__(self, **kw):
+		for key,val in kw.items():
+			if not isinstance(val,str):
+				self[key] = val
+		temp = {}
+		for key,val in kw.items():
+			if isinstance(val,str):
+				try:
+					self[key] = val.format(**self)
+				except KeyError:
+					temp[key] = val
+		temp1 = {}
+		for key,val in temp.items():
+			try:
+				self[key] = val.format(**self)
+			except KeyError:
+				temp1[key] = val
+		for key,val in temp1.items():
+			self[key] = val.format(**self)
+
