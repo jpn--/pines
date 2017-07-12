@@ -46,7 +46,17 @@ def recursive_resolve_shortcut(x):
 
 	
 def exact_import(modulename, filepath, resolve_shortcuts=True):
-	"""Import a specific python module or script as if it were a standard module."""
+	"""Import a specific python module or script as if it were a standard module.
+
+	Parameters
+	----------
+	modulename : str
+		The name the new module will receive
+	filepath : str
+		Where the module file is located
+	resolve_shortcuts : bool, default True
+		Should windows shortcuts in the path for the module file be resolved?
+	"""
 	import importlib.util
 	if resolve_shortcuts:
 		filepath = recursive_resolve_shortcut(filepath)
