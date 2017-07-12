@@ -45,10 +45,11 @@ def recursive_resolve_shortcut(x):
 	return built
 
 	
-def exact_import(modulename, filepath):
+def exact_import(modulename, filepath, resolve_shortcuts=True):
 	"""Import a specific python module or script as if it were a standard module."""
 	import importlib.util
-	filepath = recursive_resolve_shortcut(filepath)
+	if resolve_shortcuts:
+		filepath = recursive_resolve_shortcut(filepath)
 	spec = importlib.util.spec_from_file_location(modulename, filepath)
 	foo = importlib.util.module_from_spec(spec)
 	spec.loader.exec_module(foo)
