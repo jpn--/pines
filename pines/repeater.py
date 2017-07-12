@@ -1,11 +1,49 @@
 import pandas
-
+import itertools
+import csv
+import io
 
 class call_me():
 	def __init__(self, func):
 		self._func = func
 	def __call__(self, *arg, **kwarg):
 		return self._func(*arg, **kwarg)
+
+
+
+def create_csv_repeat_set(*loopers, filename=None, return_buffer=False):
+	result = []
+	for i in itertools.product(*loopers):
+		x = {}
+		for j in i:
+			x.update(j)
+		result.append(x)
+	heads = result[0].keys()
+	if filename is None:
+		f = io.StringIO()
+	else:
+		f = open(filename, 'w')
+	writer = csv.DictWriter(f, heads)
+	writer.writeheader()
+	writer.writerows(result)
+	if filename is None:
+		if return_buffer:
+			f.seek(0)
+			return f
+		return f.getvalue()
+	else:
+		f.close()
+
+
+
+
+
+def loop_repeater(func, *loopers, **kwargs):
+	buffer = create_csv_repeat_set(*loopers, filename=None, return_buffer=True)
+	return external_repeater(func, buffer, **kwargs)
+
+
+
 
 
 
