@@ -2,8 +2,9 @@ import os.path
 import egnyte
 
 from .logger import flogger
+from .bytesize import bytes_scaled
 
-elog = flogger('EGNYTE')
+elog = flogger(label='EGNYTE')
 
 
 ## init
@@ -92,7 +93,7 @@ class ProgressCallbacks(egnyte.client.ProgressCallbacks):
 
 	def download_start(self, local_path, cloud_file, size):
 		"""Starting to download a file."""
-		elog("downloading {1} ({2} bytes)".format(local_path, cloud_file, size))
+		elog("downloading {1} ({2})".format(local_path, cloud_file.path, bytes_scaled(size)))
 
 	def download_progress(self, cloud_file, size, downloaded):
 		"""Some progress in file download."""
@@ -102,7 +103,7 @@ class ProgressCallbacks(egnyte.client.ProgressCallbacks):
 
 	def upload_start(self, local_path, cloud_file, size):
 		"""Starting to upload a file."""
-		elog("uploading {1} ({2} bytes)".format(local_path, cloud_file, size))
+		elog("uploading {1} ({2})".format(local_path, cloud_file.path, bytes_scaled(size)))
 
 	def upload_progress(self, cloud_file, size, uploaded):
 		"""Some progress in file upload."""
@@ -131,7 +132,7 @@ def bulk_download( egnyte_path, local_dir, log=True, overwrite=False ):
 	if isinstance(egnyte_path, str):
 		client.bulk_download([egnyte_path], local_dir, overwrite=overwrite, progress_callbacks=ProgressCallbacks() if log else None)
 	else:
-		client.bulk_upload(egnyte_path, local_dir, overwrite=overwrite, progress_callbacks=ProgressCallbacks() if log else None)
+		client.bulk_download(egnyte_path, local_dir, overwrite=overwrite, progress_callbacks=ProgressCallbacks() if log else None)
 
 
 
