@@ -1,26 +1,30 @@
 import os.path
 import egnyte
-client = egnyte.EgnyteClient()
 
 
 ## init
 
 _updates = False
 
-if "api_key" not in client.config:
-	client.config["api_key"] = "zxuez95f5utrrf7v2ukyex6y"
+config = egnyte.configuration.load()
+
+if "api_key" not in config:
+	config["api_key"] = "zxuez95f5utrrf7v2ukyex6y"
 	_updates = True
 
-if "client_id" not in client.config:
-	client.config["client_id"] = "zxuez95f5utrrf7v2ukyex6y"
+if "client_id" not in config:
+	config["client_id"] = "zxuez95f5utrrf7v2ukyex6y"
 	_updates = True
 
-if "domain" not in client.config:
-	client.config["domain"] = "camsys"
+if "domain" not in config:
+	config["domain"] = "camsys"
 	_updates = True
 
 if _updates:
-	egnyte.configuration.save(client.config)
+	egnyte.configuration.save(config)
+
+
+client = egnyte.EgnyteClient(config)
 
 
 def _folder_to_path(f):
