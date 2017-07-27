@@ -123,15 +123,15 @@ class ProgressCallbacks(egnyte.client.ProgressCallbacks):
 
 def bulk_upload( local_dir, egnyte_path, log=True ):
 	if isinstance(local_dir, str):
-		client.bulk_upload([local_dir], egnyte_path, ProgressCallbacks if log else None)
+		client.bulk_upload([local_dir], egnyte_path, ProgressCallbacks() if log else None)
 	else:
-		client.bulk_upload(local_dir, egnyte_path, ProgressCallbacks if log else None)
+		client.bulk_upload(local_dir, egnyte_path, ProgressCallbacks() if log else None)
 
 def bulk_download( egnyte_path, local_dir, log=True, overwrite=False ):
 	if isinstance(egnyte_path, str):
-		client.bulk_download([egnyte_path], local_dir, overwrite=overwrite, progress_callbacks=ProgressCallbacks if log else None)
+		client.bulk_download([egnyte_path], local_dir, overwrite=overwrite, progress_callbacks=ProgressCallbacks() if log else None)
 	else:
-		client.bulk_upload(egnyte_path, local_dir, overwrite=overwrite, progress_callbacks=ProgressCallbacks if log else None)
+		client.bulk_upload(egnyte_path, local_dir, overwrite=overwrite, progress_callbacks=ProgressCallbacks() if log else None)
 
 
 
