@@ -1,5 +1,6 @@
 import os.path
 import egnyte
+import re
 
 from .logger import flogger
 from .bytesize import bytes_scaled
@@ -71,6 +72,18 @@ def upload_file(local_file, egnyte_path):
 # 		batch_upload_file((os.path.join(root, fi) for fi in files), fo)
 
 
+def next_result_folder(egnyte_path, descrip, local_dir=None):
+	c = re.compile('^([0-9]+)\\s.+')
+	seen_max = 0
+	eg_folder = client.folder(pth(egnyte_path))
+	eg_folder.list()
+	for fo in eg_folder.folders:
+		match = c.match(fo.name)
+		if match:
+			seen_max = max(seen_max, int(match.group(1)))
+	result_folder = create_subfolder(eg_folder, subfoldername="{0:04d} {1}".format(seen_max+1, descrip))
+	bulk_upload(local_dir, result_folder, log=True)
+	return result_folder
 
 
 
