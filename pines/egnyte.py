@@ -62,6 +62,43 @@ def upload_file(local_file, egnyte_path):
 	with open(local_file, "rb") as fp:
 		file_obj.upload(fp)
 
+def upload_file_gz(local_file, egnyte_path, progress_callbacks=None):
+	if progress_callbacks is None:
+		progress_callbacks = ProgressCallbacks()
+	import gzip, io, shutil
+	basename = os.path.basename(local_file)+'.gz'
+	file_obj = client.file(pth(egnyte_path, basename))
+	buffer = io.BytesIO()
+	with open(local_file, 'rb') as f_in:
+		with gzip.open(buffer, 'wb') as buffer_out:
+			shutil.copyfileobj(f_in, buffer_out)
+	progress_callbacks.upload_start(local_file, file_obj, buffer.tell())
+	file_obj.upload(buffer)
+	progress_callbacks.upload_finish(file_obj)
+
+
+def download_file_gz(egnyte_file, local_path, overwrite=False, mkdir=True, progress_callbacks=None):
+	if progress_callbacks is None:
+		progress_callbacks = ProgressCallbacks()
+	if not os.path.exists(local_path) and mkdir:
+		os.makedirs(local_path)
+	import gzip, io, shutil
+	if egnyte_file[-3:] != '.gz':
+		egnyte_file = egnyte_file+'.gz'
+	basename = os.path.basename(egnyte_file)[:-3]
+	if not overwrite and os.path.exists(os.path.join(local_path, basename)):
+		raise FileExistsError(os.path.join(local_path, basename))
+	file_obj = client.file(pth(egnyte_file))
+	buffer = io.BytesIO()
+	progress_callbacks.download_start(local_path, file_obj, file_obj.size)
+	file_obj.download().write_to(buffer, progress_callbacks.download_progress)
+	buffer.seek(0)
+	with gzip.open(buffer, 'rb') as buffer_in:
+		with open(os.path.join(local_path, basename), 'wb') as f_out:
+			shutil.copyfileobj(buffer_in, f_out)
+	progress_callbacks.download_finish(file_obj)
+
+
 # def batch_upload_file(local_files, egnyte_path):
 # 	for local_file in local_files:
 # 		upload_file(local_file, egnyte_path)
