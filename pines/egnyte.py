@@ -77,6 +77,33 @@ def upload_file_gz(local_file, egnyte_path, progress_callbacks=None):
 	progress_callbacks.upload_finish(file_obj)
 
 
+def upload_dict_json(dictionary, filename, egnyte_path, progress_callbacks=None):
+	"""
+
+	Parameters
+	----------
+	dictionary : dict
+		The dictionary to convert to json and upload to egnyte
+	filename : str
+		A filename for the file that will be created in egnyte
+	egnyte_path : str
+		The (existing) folder in egnyte where the file will be created
+	progress_callbacks
+
+	"""
+	if progress_callbacks is None:
+		progress_callbacks = ProgressCallbacks()
+	import json, io
+	basename = os.path.basename(filename)
+	if basename[-5:] != '.json':
+		basename += '.json'
+	file_obj = client.file(pth(egnyte_path, basename))
+	buffer = io.BytesIO(json.dumps(dictionary).encode('UTF-8'))
+	progress_callbacks.upload_start("dictionary", file_obj, buffer.tell())
+	file_obj.upload(buffer)
+	progress_callbacks.upload_finish(file_obj)
+
+
 def download_file_gz(egnyte_file, local_path, overwrite=False, mkdir=True, progress_callbacks=None):
 	if progress_callbacks is None:
 		progress_callbacks = ProgressCallbacks()
@@ -97,6 +124,37 @@ def download_file_gz(egnyte_file, local_path, overwrite=False, mkdir=True, progr
 		with open(os.path.join(local_path, basename), 'wb') as f_out:
 			shutil.copyfileobj(buffer_in, f_out)
 	progress_callbacks.download_finish(file_obj)
+
+
+
+def download_dict_json(egnyte_file, progress_callbacks=None):
+	"""
+
+	Parameters
+	----------
+	egnyte_file : str
+		The location in egnyte for the json file to be loaded.
+	progress_callbacks
+
+	Returns
+	-------
+	dict
+	"""
+	if progress_callbacks is None:
+		progress_callbacks = ProgressCallbacks()
+	import json, io
+	if egnyte_file[-5:] != '.json':
+		egnyte_file = egnyte_file+'.json'
+	basename = os.path.basename(egnyte_file)[:-5]
+	file_obj = client.file(pth(egnyte_file))
+	buffer = io.BytesIO()
+	progress_callbacks.download_start('dictionary', file_obj, file_obj.size)
+	file_obj.download().write_to(buffer, progress_callbacks.download_progress)
+	buffer.seek(0)
+	result = json.loads(buffer.getvalue().decode('UTF-8'))
+	progress_callbacks.download_finish(file_obj)
+	return result
+
 
 
 # def batch_upload_file(local_files, egnyte_path):
