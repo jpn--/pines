@@ -93,6 +93,8 @@ def unclaimed_jobs(jobs_dir, results_dir=None):
 	while scan_for_jobs:
 
 		pe._load_obj(job_folder)
+		pe._load_obj(results_folder)
+
 		scan_for_jobs = False # won't scan again unless we find new work
 		for fi in job_folder.files:
 			clog.debug(f'checking {fi.name} to see if it is a job')
@@ -104,18 +106,29 @@ def unclaimed_jobs(jobs_dir, results_dir=None):
 				job_descrip = match.group(2)
 				is_job_result = re.compile(f'^({job_no})\\s+')
 
-				pe._load_obj(results_folder)
 				if len(results_folder.folders)==0:
-					# no jobs are claimed, so can claim this job
-					scan_for_jobs = True
-					yield _claim_job(results_dir, job_no, job_descrip, fi)
-				else:
+					# double check this is not changed since the results folder was cached
+					pe._load_obj(results_folder)
+					if len(results_folder.folders) == 0:
+						# no jobs are claimed, so can claim this job
+						scan_for_jobs = True
+						yield _claim_job(results_dir, job_no, job_descrip, fi)
+
+				if len(results_folder.folders) != 0:
 					already_claimed = False
 					for fo in results_folder.folders:
 						result_match = is_job_result.match(fo.name)
 						if result_match is not None:
 							clog(f"job {job_no} is already claimed")
 							already_claimed = True
+					if not already_claimed:
+						# double check this is not changed since the results folder was cached
+						pe._load_obj(results_folder)
+						for fo in results_folder.folders:
+							result_match = is_job_result.match(fo.name)
+							if result_match is not None:
+								clog(f"job {job_no} is already claimed")
+								already_claimed = True
 					if not already_claimed:
 						# This is an available job, claim it
 						scan_for_jobs = True
