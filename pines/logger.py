@@ -136,7 +136,7 @@ def easy(level=-1, label="π", *, filename=None, file_fmt='[%(name)s] %(message)
 		label = level if isinstance(level, str) else ""
 		level = level_
 	if _easy_logger is None:
-		log_to_stream(log=label)
+		log_to_stream(log="")
 		_easy_logger = 1
 	if level>0: setLevel(level)
 	return getLogger(label).critical
