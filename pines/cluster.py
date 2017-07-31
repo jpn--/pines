@@ -74,3 +74,53 @@ def claim_next_unclaimed_job(jobs_dir, results_dir=None):
 	return None, None
 
 
+def unclaimed_jobs(jobs_dir, results_dir=None):
+
+	if results_dir is None:
+		results_dir = jobs_dir
+
+	if isinstance(jobs_dir, str) and jobs_dir[-1] != '/':
+		raise TypeError('jobs_dir must be a folder path ending in a slash')
+	if isinstance(results_dir, str) and results_dir[-1] != '/':
+		raise TypeError('results_dir must be a folder path ending in a slash')
+
+	is_job = re.compile('^([0-9]+)\\s+(.+)\.json$')
+	job_folder = pe.client.folder(pe.pth(jobs_dir))
+	results_folder = pe.client.folder(pe.pth(results_dir))
+
+	scan_for_jobs = True # initial condition
+
+	while scan_for_jobs:
+
+		pe._load_obj(job_folder)
+		scan_for_jobs = False # won't scan again unless we find new work
+		for fi in job_folder.files:
+			clog.debug(f'checking {fi.name} to see if it is a job')
+			match = is_job.match(fi.name)
+			if match:
+				clog(f'{fi.name} is a job, checking if it is claimed')
+				# a job .json config file is found, see if it is claimed
+				job_no = match.group(1)
+				job_descrip = match.group(2)
+				is_job_result = re.compile(f'^({job_no})\\s+')
+
+				pe._load_obj(results_folder)
+				if len(results_folder.folders)==0:
+					# no jobs are claimed, so can claim this job
+					scan_for_jobs = True
+					yield _claim_job(results_dir, job_no, job_descrip, fi)
+				else:
+					already_claimed = False
+					for fo in results_folder.folders:
+						result_match = is_job_result.match(fo.name)
+						if result_match is not None:
+							clog(f"job {job_no} is already claimed")
+							already_claimed = True
+					if not already_claimed:
+						# This is an available job, claim it
+						scan_for_jobs = True
+						yield _claim_job(results_dir, job_no, job_descrip, fi)
+			else:
+				clog(f'{fi.name} is not a job')
+	raise StopIteration
+
