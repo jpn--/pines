@@ -1,6 +1,7 @@
 import os.path
 import egnyte
 import re
+import time
 
 from .logger import flogger
 from .bytesize import bytes_scaled
@@ -26,6 +27,10 @@ if "domain" not in config:
 	config["domain"] = "camsys"
 	_updates = True
 
+if "time_between_requests" not in config:
+	config["time_between_requests"] = 1
+	_updates = True
+
 if _updates:
 	egnyte.configuration.save(config)
 
@@ -36,20 +41,40 @@ client = egnyte.EgnyteClient(config)
 def _folder_to_path(f):
 	if isinstance(f,egnyte.resources.Folder):
 		return f.path
+	if isinstance(f,egnyte.resources.File):
+		return f.path
 	return f
 
 def pth(*arg):
 	return "/".join(_folder_to_path(f) for f in arg).replace('//','/').replace('\\','/')
 
 
-def create_folder(folder_path):
+def _load_obj(obj, retries=10, interval=1):
+	for i in range(retries):
+		try:
+			obj._get()
+		except egnyte.exc.NotAuthorized:
+			elog(f'Try {i} NotAuthorized:'+str(obj).replace("{","[").replace("}","]"))
+			time.sleep(interval)
+		else:
+			break
+
+
+def create_folder(folder_path, retries=10, interval=1):
 	"""
 	Create a new folder within Egnyte.
 
 	:param folder_path:
 	:return: egnyte.resources.Folder
 	"""
-	folder = client.folder(pth(folder_path)).create(ignore_if_exists=True)
+	for i in range(retries):
+		try:
+			folder = client.folder(pth(folder_path)).create(ignore_if_exists=True)
+		except egnyte.exc.NotAuthorized:
+			elog(f'Create Folder Attempt {i} NotAuthorized:'+str(folder_path).replace("{","[").replace("}","]"))
+			time.sleep(interval)
+		else:
+			break
 	return folder
 
 def create_subfolder(folder, subfoldername):
@@ -77,7 +102,7 @@ def upload_file_gz(local_file, egnyte_path, progress_callbacks=None):
 	progress_callbacks.upload_finish(file_obj)
 
 
-def upload_dict_json(dictionary, filename, egnyte_path, progress_callbacks=None):
+def upload_dict_json(dictionary, filename, egnyte_path, progress_callbacks=None, retries=10, interval=1):
 	"""
 
 	Parameters
@@ -100,7 +125,14 @@ def upload_dict_json(dictionary, filename, egnyte_path, progress_callbacks=None)
 	file_obj = client.file(pth(egnyte_path, basename))
 	buffer = io.BytesIO(json.dumps(dictionary).encode('UTF-8'))
 	progress_callbacks.upload_start("dictionary", file_obj, buffer.tell())
-	file_obj.upload(buffer)
+	for i in range(retries):
+		try:
+			file_obj.upload(buffer)
+		except egnyte.exc.NotAuthorized:
+			elog('upload NotAuthorized: '+str(file_obj).replace('{','[').replace('}',']'))
+			time.sleep(interval)
+		else:
+			break
 	progress_callbacks.upload_finish(file_obj)
 
 
@@ -110,7 +142,7 @@ def download_file_gz(egnyte_file, local_path, overwrite=False, mkdir=True, progr
 	if not os.path.exists(local_path) and mkdir:
 		os.makedirs(local_path)
 	import gzip, io, shutil
-	if egnyte_file[-3:] != '.gz':
+	if isinstance(egnyte_file, str) and egnyte_file[-3:] != '.gz':
 		egnyte_file = egnyte_file+'.gz'
 	basename = os.path.basename(egnyte_file)[:-3]
 	if not overwrite and os.path.exists(os.path.join(local_path, basename)):
@@ -127,7 +159,7 @@ def download_file_gz(egnyte_file, local_path, overwrite=False, mkdir=True, progr
 
 
 
-def download_dict_json(egnyte_file, progress_callbacks=None):
+def download_dict_json(egnyte_file, progress_callbacks=None, retries=10, interval=1):
 	"""
 
 	Parameters
@@ -143,13 +175,20 @@ def download_dict_json(egnyte_file, progress_callbacks=None):
 	if progress_callbacks is None:
 		progress_callbacks = ProgressCallbacks()
 	import json, io
-	if egnyte_file[-5:] != '.json':
+	if isinstance(egnyte_file, str) and egnyte_file[-5:] != '.json':
 		egnyte_file = egnyte_file+'.json'
-	basename = os.path.basename(egnyte_file)[:-5]
 	file_obj = client.file(pth(egnyte_file))
 	buffer = io.BytesIO()
+	_load_obj(file_obj)
 	progress_callbacks.download_start('dictionary', file_obj, file_obj.size)
-	file_obj.download().write_to(buffer, progress_callbacks.download_progress)
+	for i in range(retries):
+		try:
+			file_obj.download().write_to(buffer, progress_callbacks.download_progress)
+		except egnyte.exc.NotAuthorized:
+			elog('download NotAuthorized: '+str(file_obj).replace('{','[').replace('}',']'))
+			time.sleep(interval)
+		else:
+			break
 	buffer.seek(0)
 	result = json.loads(buffer.getvalue().decode('UTF-8'))
 	progress_callbacks.download_finish(file_obj)
@@ -171,7 +210,7 @@ def next_result_folder(egnyte_path, descrip, local_dir=None):
 	c = re.compile('^([0-9]+)\\s.+')
 	seen_max = 0
 	eg_folder = client.folder(pth(egnyte_path))
-	eg_folder.list()
+	_load_obj(eg_folder)
 	for fo in eg_folder.folders:
 		match = c.match(fo.name)
 		if match:
