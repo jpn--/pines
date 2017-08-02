@@ -13,7 +13,7 @@ def _zipdir(path, ziph, skip_dots=True):
 
 def zipdir(source_dir, zip_file_name, skip_dots=True):
 	with zipfile.ZipFile(zip_file_name, 'w', zipfile.ZIP_DEFLATED) as zipf:
-		_zipdir(source_dir, zipf)
+		_zipdir(source_dir, zipf, skip_dots=skip_dots)
 
 def zipmod(module, zip_file_name, skip_dots=True):
 	"""
@@ -30,6 +30,12 @@ def zipmod(module, zip_file_name, skip_dots=True):
 
 	"""
 	with zipfile.ZipFile(zip_file_name, 'w', zipfile.ZIP_DEFLATED) as zipf:
-		_zipdir(module.__path__[0], zipf)
+		_zipdir(module.__path__[0], zipf, skip_dots=skip_dots)
 
 
+def zipmod(module, skip_dots=True):
+	import tempfile
+	tempdir = tempfile.TemporaryDirectory()
+	zip_file_name = os.path.join(tempdir.name, module.__name__+".zip")
+	z = zipmod(module, zip_file_name, skip_dots=skip_dots)
+	return z, tempdir
