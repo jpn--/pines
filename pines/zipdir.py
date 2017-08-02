@@ -7,9 +7,12 @@ def _zipdir(path, ziph, skip_dots=True):
 	for root, dirs, files in os.walk(path):
 		folder = os.path.basename(root)
 		if (len(folder) and folder[0] != '.') or not skip_dots:
+			print('zipping folder:', folder, "in", root)
 			for file in files:
 				if file[0]!='.' or not skip_dots:
 					ziph.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), os.path.relpath(os.path.join(root, file), os.path.join(path, '..'))))
+		else:
+			print('not zipping folder:', folder, "in", root)
 
 def zipdir(source_dir, zip_file_name, skip_dots=True):
 	with zipfile.ZipFile(zip_file_name, 'w', zipfile.ZIP_DEFLATED) as zipf:
