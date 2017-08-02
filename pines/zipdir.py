@@ -30,6 +30,6 @@ def zipmod(module, zip_file_name, skip_dots=True):
 
 	"""
 	with zipfile.ZipFile(zip_file_name, 'w', zipfile.ZIP_DEFLATED) as zipf:
-		_zipdir(module.__path__, zipf)
+		_zipdir(module.__path__[0], zipf)
 
 
