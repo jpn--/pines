@@ -1,7 +1,7 @@
 
 import os.path
 import json
-from .attribute_dict import dicta
+from .attribute_dict import quickdot
 
 def add_directory(filepath):
     """
@@ -22,10 +22,10 @@ def load(filename=None):
     filename = add_directory(filename or 'configure.json')
     try:
         with open(filename, "r") as f:
-            return dicta(json.load(f))
+            return quickdot(json.load(f))
     except IOError:
         pass
-    return dicta()
+    return quickdot()
 
 
 def save(config, filename=None):
