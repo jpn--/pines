@@ -137,14 +137,26 @@ def upload_dict_json(dictionary, filename, egnyte_path, progress_callbacks=None,
 
 
 
-def download_file(egnyte_file, local_path, overwrite=False, mkdir=True, progress_callbacks=None):
+def download_file(egnyte_file, local_path, overwrite=False, mkdir=True, progress_callbacks=None, retries=10, interval=1):
 	if not os.path.exists(local_path) and mkdir:
 		os.makedirs(local_path)
-	client.bulk_download([egnyte_file], local_path, overwrite=overwrite, progress_callbacks=progress_callbacks)
+	success = False
+	for i in range(retries):
+		try:
+			client.bulk_download([egnyte_file], local_path, overwrite=overwrite, progress_callbacks=progress_callbacks)
+		except egnyte.exc.NotAuthorized:
+			elog('download NotAuthorized: ' + str(egnyte_file).replace('{', '[').replace('}', ']'))
+			time.sleep(interval)
+		except egnyte.exc.NotFound:
+			raise FileNotFoundError(f'egnyte:{egnyte_file}')
+		else:
+			success = True
+			break
+	if not success:
+		raise egnyte.exc.NotAuthorized(f'after {retries} tries')
 
 
-
-def download_file_gz(egnyte_file, local_path, overwrite=False, mkdir=True, progress_callbacks=None):
+def download_file_gz(egnyte_file, local_path, overwrite=False, mkdir=True, progress_callbacks=None, retries=10, interval=1):
 	if progress_callbacks is None:
 		progress_callbacks = ProgressCallbacks()
 	if not os.path.exists(local_path) and mkdir:
@@ -155,16 +167,25 @@ def download_file_gz(egnyte_file, local_path, overwrite=False, mkdir=True, progr
 	basename = os.path.basename(egnyte_file)[:-3]
 	if not overwrite and os.path.exists(os.path.join(local_path, basename)):
 		raise FileExistsError(os.path.join(local_path, basename))
-	file_obj = client.file(pth(egnyte_file))
-	buffer = io.BytesIO()
-	progress_callbacks.download_start(local_path, file_obj, file_obj.size)
-	file_obj.download().write_to(buffer, progress_callbacks.download_progress)
-	buffer.seek(0)
-	with gzip.open(buffer, 'rb') as buffer_in:
-		with open(os.path.join(local_path, basename), 'wb') as f_out:
-			shutil.copyfileobj(buffer_in, f_out)
-	progress_callbacks.download_finish(file_obj)
-
+	try:
+		file_obj = client.file(pth(egnyte_file))
+		buffer = io.BytesIO()
+		progress_callbacks.download_start(local_path, file_obj, file_obj.size)
+		for i in range(retries):
+			try:
+				file_obj.download().write_to(buffer, progress_callbacks.download_progress)
+			except egnyte.exc.NotAuthorized:
+				elog('download NotAuthorized: '+str(file_obj).replace('{','[').replace('}',']'))
+				time.sleep(interval)
+			else:
+				break
+		buffer.seek(0)
+		with gzip.open(buffer, 'rb') as buffer_in:
+			with open(os.path.join(local_path, basename), 'wb') as f_out:
+				shutil.copyfileobj(buffer_in, f_out)
+		progress_callbacks.download_finish(file_obj)
+	except egnyte.exc.NotFound:
+		raise FileNotFoundError(f'egnyte:{egnyte_file}')
 
 
 def download_dict_json(egnyte_file, progress_callbacks=None, retries=10, interval=1):
@@ -185,23 +206,25 @@ def download_dict_json(egnyte_file, progress_callbacks=None, retries=10, interva
 	import json, io
 	if isinstance(egnyte_file, str) and egnyte_file[-5:] != '.json':
 		egnyte_file = egnyte_file+'.json'
-	file_obj = client.file(pth(egnyte_file))
-	buffer = io.BytesIO()
-	_load_obj(file_obj)
-	progress_callbacks.download_start('dictionary', file_obj, file_obj.size)
-	for i in range(retries):
-		try:
-			file_obj.download().write_to(buffer, progress_callbacks.download_progress)
-		except egnyte.exc.NotAuthorized:
-			elog('download NotAuthorized: '+str(file_obj).replace('{','[').replace('}',']'))
-			time.sleep(interval)
-		else:
-			break
-	buffer.seek(0)
-	result = json.loads(buffer.getvalue().decode('UTF-8'))
-	progress_callbacks.download_finish(file_obj)
-	return result
-
+	try:
+		file_obj = client.file(pth(egnyte_file))
+		buffer = io.BytesIO()
+		_load_obj(file_obj)
+		progress_callbacks.download_start('dictionary', file_obj, file_obj.size)
+		for i in range(retries):
+			try:
+				file_obj.download().write_to(buffer, progress_callbacks.download_progress)
+			except egnyte.exc.NotAuthorized:
+				elog('download NotAuthorized: '+str(file_obj).replace('{','[').replace('}',']'))
+				time.sleep(interval)
+			else:
+				break
+		buffer.seek(0)
+		result = json.loads(buffer.getvalue().decode('UTF-8'))
+		progress_callbacks.download_finish(file_obj)
+		return result
+	except egnyte.exc.NotFound:
+		raise FileNotFoundError(f'egnyte:{egnyte_file}')
 
 
 # def batch_upload_file(local_files, egnyte_path):
