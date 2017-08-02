@@ -170,7 +170,10 @@ def download_file_gz(egnyte_file, local_path, overwrite=False, mkdir=True, progr
 	try:
 		file_obj = client.file(pth(egnyte_file))
 		buffer = io.BytesIO()
-		progress_callbacks.download_start(local_path, file_obj, file_obj.size)
+		try:
+			progress_callbacks.download_start(local_path, file_obj, file_obj.size)
+		except egnyte.exc.NotAuthorized:
+			progress_callbacks.download_start(local_path, file_obj, -1)
 		for i in range(retries):
 			try:
 				file_obj.download().write_to(buffer, progress_callbacks.download_progress)
@@ -210,7 +213,10 @@ def download_dict_json(egnyte_file, progress_callbacks=None, retries=10, interva
 		file_obj = client.file(pth(egnyte_file))
 		buffer = io.BytesIO()
 		_load_obj(file_obj)
-		progress_callbacks.download_start('dictionary', file_obj, file_obj.size)
+		try:
+			progress_callbacks.download_start('dictionary', file_obj, file_obj.size)
+		except egnyte.exc.NotAuthorized:
+			progress_callbacks.download_start('dictionary', file_obj, -1)
 		for i in range(retries):
 			try:
 				file_obj.download().write_to(buffer, progress_callbacks.download_progress)
