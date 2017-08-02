@@ -136,6 +136,14 @@ def upload_dict_json(dictionary, filename, egnyte_path, progress_callbacks=None,
 	progress_callbacks.upload_finish(file_obj)
 
 
+
+def download_file(egnyte_file, local_path, overwrite=False, mkdir=True, progress_callbacks=None):
+	if not os.path.exists(local_path) and mkdir:
+		os.makedirs(local_path)
+	client.bulk_download([egnyte_file], local_path, overwrite=overwrite, progress_callbacks=progress_callbacks)
+
+
+
 def download_file_gz(egnyte_file, local_path, overwrite=False, mkdir=True, progress_callbacks=None):
 	if progress_callbacks is None:
 		progress_callbacks = ProgressCallbacks()
