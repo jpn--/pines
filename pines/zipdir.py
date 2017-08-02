@@ -37,5 +37,5 @@ def zipmod_temp(module, skip_dots=True):
 	import tempfile
 	tempdir = tempfile.TemporaryDirectory()
 	zip_file_name = os.path.join(tempdir.name, module.__name__+".zip")
-	z = zipmod(module, zip_file_name, skip_dots=skip_dots)
-	return z, tempdir
+	zipmod(module, zip_file_name, skip_dots=skip_dots)
+	return zip_file_name, tempdir
