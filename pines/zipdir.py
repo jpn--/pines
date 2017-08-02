@@ -33,7 +33,7 @@ def zipmod(module, zip_file_name, skip_dots=True):
 		_zipdir(module.__path__[0], zipf, skip_dots=skip_dots)
 
 
-def zipmod(module, skip_dots=True):
+def zipmod_temp(module, skip_dots=True):
 	import tempfile
 	tempdir = tempfile.TemporaryDirectory()
 	zip_file_name = os.path.join(tempdir.name, module.__name__+".zip")
