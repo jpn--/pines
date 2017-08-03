@@ -81,11 +81,20 @@ def create_subfolder(folder, subfoldername):
 	f = client.folder(pth(folder,subfoldername)).create(ignore_if_exists=True)
 	return f
 
-def upload_file(local_file, egnyte_path):
+def upload_file(local_file, egnyte_path, retries=10, interval=1):
 	basename = os.path.basename(local_file)
 	file_obj = client.file( pth(egnyte_path,basename) )
-	with open(local_file, "rb") as fp:
-		file_obj.upload(fp)
+	err = egnyte.exc.EgnyteError('upload failed')
+	for i in range(retries):
+		try:
+			with open(local_file, "rb") as fp:
+				file_obj.upload(fp)
+		except egnyte.exc.EgnyteError as err:
+			elog(f'Upload Attempt failed for {local_file}')
+			time.sleep(interval)
+		else:
+			return
+	raise err
 
 def upload_file_gz(local_file, egnyte_path, progress_callbacks=None):
 	if progress_callbacks is None:
