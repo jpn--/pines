@@ -19,9 +19,31 @@ def _zipdir(path, ziph, skip_dots=True):
 			print('not zipping folder:', folder, "in", root)
 			skips.add(os.path.join(root,folder))
 
-def zipdir(source_dir, zip_file_name, skip_dots=True):
+def zipdir(source_dir, zip_file_name=None, skip_dots=True):
+	"""
+
+	Parameters
+	----------
+	source_dir
+	zip_file_name : str
+		If not given, uses the name of the sourcedir.
+	skip_dots : bool, defaults True
+		Ignore files and dirs that start with a dot.
+
+	Returns
+	-------
+	str
+		zip_file_name
+	"""
+	if zip_file_name is None:
+		if source_dir[-1] in ('/', '\\'):
+			usepath = source_dir[:-1]
+		else:
+			usepath = source_dir
+		zip_file_name = usepath + '.zip'
 	with zipfile.ZipFile(zip_file_name, 'w', zipfile.ZIP_DEFLATED) as zipf:
 		_zipdir(source_dir, zipf, skip_dots=skip_dots)
+	return zip_file_name
 
 def zipmod(module, zip_file_name, skip_dots=True):
 	"""
