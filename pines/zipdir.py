@@ -21,10 +21,10 @@ def _zipdir(path, ziph, skip_dots=True):
 	keep_dots = not skip_dots
 	for root, dirs, files in os.walk(path):
 		folder = os.path.basename(root)
-		if keep_dots or _any_dot(folder):
+		if keep_dots or not _any_dot(folder):
 			print('zipping folder:', folder, "in", root)
 			for file in files:
-				if keep_dots or _any_dot(file):
+				if keep_dots or not _any_dot(file):
 					ziph.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), os.path.join(path, '..')))
 		else:
 			print('not zipping folder:', folder, "in", root)
