@@ -2,22 +2,32 @@
 import os
 import zipfile
 
+
+
+def _rec_split(s):
+	rest, tail = os.path.split(s)
+	if rest in ('', os.path.sep):
+		return tail,
+	return _rec_split(rest) + (tail,)
+
+def _any_dot(s):
+	for i in _rec_split(s):
+		if len(i)>0 and i[0]=='.':
+			return True
+	return False
+
 def _zipdir(path, ziph, skip_dots=True):
 	# ziph is zipfile handle
-	skips = set()
+	keep_dots = not skip_dots
 	for root, dirs, files in os.walk(path):
 		folder = os.path.basename(root)
-		for s in skips:
-			if s in root:
-				continue
-		if (len(folder) and folder[0] != '.') or not skip_dots:
+		if keep_dots or _any_dot(folder):
 			print('zipping folder:', folder, "in", root)
 			for file in files:
-				if file[0]!='.' or not skip_dots:
+				if keep_dots or _any_dot(file):
 					ziph.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), os.path.join(path, '..')))
 		else:
 			print('not zipping folder:', folder, "in", root)
-			skips.add(os.path.join(root,folder))
 
 def zipdir(source_dir, zip_file_name=None, skip_dots=True):
 	"""
