@@ -24,10 +24,13 @@ def locked_directory(dirname, retry_after=5, timeout=600, busy_flag="__BUSY__"):
 	with open(busy_file, 'w') as f1:
 		f1.write('busy')
 
-	yield dirname
-
-	flog.info(f"releasing {dirname}")
-	os.remove(busy_file)
+	try:
+		yield dirname
+	except:
+		raise
+	finally:
+		flog.info(f"releasing {dirname}")
+		os.remove(busy_file)
 
 
 
