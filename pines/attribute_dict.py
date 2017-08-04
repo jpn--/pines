@@ -57,7 +57,23 @@ class quickdot(dict):
 			self[key] = z = quickdot()
 			return z
 		return super().__getitem__(key)
-
+	def __init__(self, *arg, **kwargs):
+		super().__init__()
+		a = []
+		for i in arg:
+			if isinstance(i,dict):
+				for key, val in i.items():
+					if isinstance(val, dict):
+						self[key] = quickdot(val)
+					else:
+						self[key] = val
+			else:
+				raise TypeError('cannot init from not-a-dict')
+		for key,val in kwargs.items():
+			if isinstance(val,dict):
+				self[key] = quickdot(val)
+			else:
+				self[key] = val
 
 def add_to_quickdot(qdot,tag,value):
 	if isinstance(tag,str):
