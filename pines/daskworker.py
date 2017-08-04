@@ -33,11 +33,16 @@ def new_worker(scheduler=None, name=None, **kwargs):
 	t = Thread(target=loop.start, daemon=True)
 	t.start()
 
-	w = Worker(f'tcp://{scheduler}:8786', loop=loop, name=name, **kwargs)
+	scheduler_location = f'tcp://{scheduler}:8786'
+	logging.getLogger('distributed').info(f"starting worker {name} for {scheduler_location}")
+
+	w = Worker(scheduler_location, loop=loop, name=name, **kwargs)
 	w.start()  # choose randomly assigned port
 	
 	t.join()
 	
+	logging.getLogger('distributed').critical(f"ending worker {name} for {scheduler_location}")
+
 if __name__=='__main__':
 	w=new_worker()
 
