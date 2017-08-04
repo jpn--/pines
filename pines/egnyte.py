@@ -329,6 +329,29 @@ def bulk_download( egnyte_path, local_dir, log=True, overwrite=False ):
 
 
 
+def glob_upload_gz(pattern, egnyte_path, log=True, dryrun=False):
+	"""
+	Upload a gzipped version of all files matching pattern into egynte.
+
+	Parameters
+	----------
+	pattern : str
+		A glob pattern
+	egnyte_path : str or egnyte.Folder
+	log : bool, default True
+		Log the results
+	dryrun : bool, default False
+		If true, just log what would be done, don't actually upload the files.
+
+	"""
+	import glob
+	for filename in glob.glob(pattern):
+		if log:
+			elog(f"found file for upload:{filename}")
+		if not dryrun:
+			upload_file_gz(filename, egnyte_path, progress_callbacks=ProgressCallbacks() if log else None)
+
+
 
 
 def get_access_token():
