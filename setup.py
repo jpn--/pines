@@ -58,6 +58,7 @@ setup(
     entry_points={
         'console_scripts': [
             'pines_config = pines.configure:print_config',
+            'pines_cluster_worker_v = pines.daskworker:new_worker',
         ],
 
         'gui_scripts': [
