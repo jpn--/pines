@@ -2,7 +2,7 @@
 from . import configure
 
 _time_format = '%b %d %H:%M:%S'
-_mess_format = '%(asctime)15s %(name)s %(level)s %(message)s'
+_mess_format = '%(asctime)15s %(name)s %(levelname)s %(message)s'
 
 def new_worker(scheduler=None, name=None, **kwargs):
 
