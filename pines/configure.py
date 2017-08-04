@@ -40,3 +40,7 @@ def save(config, filename=None):
     with open(filename, "w") as f:
         json.dump(config, f, indent=2, sort_keys=True)
 
+
+def print_config():
+    q = load()
+    print(q)

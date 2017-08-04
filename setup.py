@@ -54,4 +54,10 @@ setup(
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=[],
 
+
+    entry_points={
+        'console_scripts': [
+            'pines_config = pines.configure:print_config',
+        ]
+    }
 )
