@@ -1,7 +1,7 @@
 
 import os.path
 import json
-from .attribute_dict import quickdot
+from .attribute_dict import quickdot, add_to_quickdot
 
 def add_directory(filepath):
     """
@@ -41,10 +41,23 @@ def save(config, filename=None):
         json.dump(config, f, indent=2, sort_keys=True)
 
 
-def print_config(tag=None, value=None):
-    if tag:
-        print('tag is',tag)
-    if value:
-        print('value is',value)
+def print_config(args=None):
+    import argparse
+    parser = argparse.ArgumentParser(prog='pines_config')
+    parser.add_argument('--add', nargs=2, action='append')
+    space = parser.parse_args()
+
     q = load()
+    if space.add:
+        for tag,val in space.add:
+            print('setting',tag,'to',val)
+            try:
+                val = int(val)
+            except ValueError:
+                try:
+                    val = float(val)
+                except ValueError:
+                    pass
+            q = add_to_quickdot(q,tag,val)
+        save(q)
     print(q)

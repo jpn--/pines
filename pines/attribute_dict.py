@@ -59,6 +59,18 @@ class quickdot(dict):
 		return super().__getitem__(key)
 
 
+def add_to_quickdot(qdot,tag,value):
+	if isinstance(tag,str):
+		keys = tag.split('.')
+	else:
+		keys = tag
+	if len(keys) > 1:
+		add_to_quickdot(qdot[keys[0]], keys[1:], value)
+	else:
+		qdot[keys[0]] = value
+	return qdot
+
+
 class fdict(dicta):
 	def __init__(self, **kw):
 		for key,val in kw.items():
