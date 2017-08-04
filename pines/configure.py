@@ -41,6 +41,10 @@ def save(config, filename=None):
         json.dump(config, f, indent=2, sort_keys=True)
 
 
-def print_config():
+def print_config(tag=None, value=None):
+    if tag:
+        print('tag is',tag)
+    if value:
+        print('value is',value)
     q = load()
     print(q)
