@@ -14,6 +14,7 @@ def new_worker(scheduler=None, name=None, **kwargs):
 		handler.setFormatter(formatter)
 		logging.getLogger('distributed').addHandler(handler)
 		logging.getLogger('distributed').setLevel(logging.DEBUG)
+		logging.getLogger('distributed').info(f"opening log for {name}")
 
 	if 'scheduler' not in cfg.cluster and scheduler is None:
 		raise ValueError('no scheduler known, set one in pines.configure .cluster')
@@ -40,7 +41,7 @@ def new_worker(scheduler=None, name=None, **kwargs):
 	w.start()  # choose randomly assigned port
 	
 	t.join()
-	
+
 	logging.getLogger('distributed').critical(f"ending worker {name} for {scheduler_location}")
 
 if __name__=='__main__':
