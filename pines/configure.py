@@ -73,3 +73,70 @@ def print_config(args=None):
             q = add_to_quickdot(q,tag,val)
         save(q)
     print(q)
+
+
+
+
+def check_config(checklist, window_title="PINES CONFIG"):
+    global _top_cfg
+    _top_cfg = load()
+
+    from tkinter import Tk, Entry, Button, mainloop, END, Label, LEFT, BOTTOM
+
+    master = Tk()
+    master.wm_title(window_title)
+
+    def makeentry(parent, caption_, width=None, row=None, **options):
+        if row is None:
+            Label(parent, text=caption_).pack(side=LEFT)
+        else:
+            Label(parent, text=caption_).grid(row=row,column=0)
+        entry = Entry(parent, **options)
+        if width:
+            entry.config(width=width)
+        if row is None:
+            entry.pack(side=LEFT)
+        else:
+            entry.grid(row=row,column=1)
+        return entry
+
+    ents = []
+    for rownum, check in enumerate(checklist):
+        ents.append(makeentry(master, check, width=90, row=rownum))
+        ents[-1].delete(0, END)
+        if _top_cfg[check] is None:
+            this_str = "<None>"
+        else:
+            this_str = str(_top_cfg[check])
+        ents[-1].insert(0, this_str)
+
+    ents[0].focus_set()
+
+    def callback_onetime():
+        global _top_cfg
+        for check, ent in zip(checklist, ents):
+            this_str = (ent.get())
+            if this_str == "<None>":
+                _top_cfg[check] = None
+            else:
+                try:
+                    this_str = int(this_str)
+                except ValueError:
+                    try:
+                        this_str = float(this_str)
+                    except ValueError:
+                        pass
+                _top_cfg[check] = this_str
+        master.destroy()
+
+    def callback_save():
+        callback_onetime()
+        save(_top_cfg)
+
+    b = Button(master, text = "OK - One Time", width = 20, command = callback_onetime)
+    b.grid(row=rownum+1,column=0, columnspan=2)
+    b2 = Button(master, text = "OK - Save to Config File", width = 20, command = callback_save)
+    b2.grid(row=rownum+2,column=0, columnspan=2)
+    mainloop()
+    return _top_cfg
+
