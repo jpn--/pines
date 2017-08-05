@@ -53,10 +53,19 @@ class quickdot(dict):
 		else:
 			return self.__class__.__name__ + "()"
 	def __getitem__(self, key):
-		if key not in self:
-			self[key] = z = quickdot()
-			return z
-		return super().__getitem__(key)
+		if "." not in key:
+			if key not in self:
+				self[key] = z = quickdot()
+				return z
+			else:
+				return super().__getitem__(key)
+		else: # dot in key
+			keys = key.split('.')
+			if keys[0] not in self:
+				self[keys[0]] = z = quickdot()
+				return z[".".join(keys[1:])]
+			else: # first key found
+				return self[keys[0]][".".join(keys[1:])]
 	def __init__(self, *arg, **kwargs):
 		super().__init__()
 		a = []
@@ -74,6 +83,25 @@ class quickdot(dict):
 				self[key] = quickdot(val)
 			else:
 				self[key] = val
+	def __contains__(self, item):
+		try:
+			if super().__contains__(item):
+				return True
+		except TypeError:
+			pass
+		if isinstance(item,str):
+			keys = item.split('.')
+		else:
+			keys = item
+		if len(keys) > 1:
+			if super().__contains__(keys[0]):
+				return (keys[1:]) in (self[keys[0]])
+			else:
+				return False
+		else:
+			return super().__contains__(keys[0])
+
+
 
 def add_to_quickdot(qdot,tag,value):
 	if isinstance(tag,str):
