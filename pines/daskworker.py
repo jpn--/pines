@@ -15,18 +15,11 @@ def new_worker(scheduler=None, name=None, **kwargs):
 		logging.getLogger('distributed').setLevel(logging.DEBUG)
 		logging.getLogger('distributed').info(f"opening log for {name}")
 
-	if 'scheduler' not in cfg.cluster and scheduler is None:
-		#raise ValueError('no scheduler known, set one in pines.configure .cluster')
-		from .popup import get_string
-		scheduler = get_string("Scheduler IP address:", window_title="Pines Cluster Worker")
-
-	if 'scheduler' in cfg.cluster and scheduler is None:
-		#raise ValueError('no scheduler known, set one in pines.configure .cluster')
-		from .popup import get_string
-		scheduler = get_string("Scheduler IP address:", default_value=cfg.cluster['scheduler'])
-
 	if scheduler is None:
 		scheduler = cfg.cluster['scheduler']
+
+	if scheduler is None: # still...
+		raise ValueError('no scheduler known, set one in pines.configure .cluster')
 
 	from distributed import Worker
 	from tornado.ioloop import IOLoop
