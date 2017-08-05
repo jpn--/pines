@@ -41,6 +41,18 @@ def save(config, filename=None):
         json.dump(config, f, indent=2, sort_keys=True)
 
 
+def add(tag, val):
+    q = load()
+    try:
+        val = int(val)
+    except ValueError:
+        try:
+            val = float(val)
+        except ValueError:
+            pass
+    q = add_to_quickdot(q,tag,val)
+    save(q)
+
 def print_config(args=None):
     import argparse
     parser = argparse.ArgumentParser(prog='pines_config')

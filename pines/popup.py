@@ -1,10 +1,11 @@
 _string_gotten = ""
 
-def get_string(caption="Prompt:", default_value="default value"):
+def get_string(caption="Prompt:", default_value="default value", window_title="PINES"):
 	global _string_gotten
 	from tkinter import Tk, Entry, Button, mainloop, END, Label, LEFT
 
 	master = Tk()
+	master.wm_title(window_title)
 
 	def makeentry(parent, caption_, width=None, **options):
 		Label(parent, text=caption_).pack(side=LEFT)
@@ -14,7 +15,7 @@ def get_string(caption="Prompt:", default_value="default value"):
 		entry.pack(side=LEFT)
 		return entry
 
-	e = makeentry(master, caption, width=50)
+	e = makeentry(master, caption, width=90)
 	e.pack()
 
 	e.delete(0, END)
