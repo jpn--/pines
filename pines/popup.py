@@ -24,11 +24,10 @@ def get_string(caption="Prompt:", default_value="default value"):
 	def callback():
 		global _string_gotten
 		_string_gotten = (e.get()) # This is the text you may want to use later
-		master.quit()
+		master.destroy()
 
 	b = Button(master, text = "OK", width = 10, command = callback)
 	b.pack()
-
 	mainloop()
 	return _string_gotten
 
