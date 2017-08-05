@@ -66,6 +66,14 @@ class quickdot(dict):
 				return z[".".join(keys[1:])]
 			else: # first key found
 				return self[keys[0]][".".join(keys[1:])]
+	def __setitem__(self, key, val):
+		if "." not in key:
+			super().__setitem__(key, val)
+		else: # dot in key
+			keys = key.split('.')
+			if keys[0] not in self:
+				self[keys[0]] = quickdot()
+			self[keys[0]][".".join(keys[1:])] = val
 	def __init__(self, *arg, **kwargs):
 		super().__init__()
 		a = []
