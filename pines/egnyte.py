@@ -343,7 +343,7 @@ def import_remote_python_package( egnyte_path, package_name=None, log=True ):
 		sys.path.insert(0, tempdir.name)
 	importlib.invalidate_caches()
 	if package_name in sys.modules:
-		return importlib.reload(package_name)
+		return importlib.reload(sys.modules[package_name])
 	else:
 		return importlib.import_module(package_name)
 
