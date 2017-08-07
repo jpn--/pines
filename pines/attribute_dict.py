@@ -112,11 +112,20 @@ class quickdot(dict):
 		if not isinstance(other, quickdot):
 			raise TypeError("can only add quickdot to quickdot")
 		combo = quickdot(self)
-		combo.update(other)
+		for key, val in other.items():
+			if isinstance(val,quickdot):
+				combo[key] += val
+			else:
+				combo[key] = val
 		return combo
 	def __iadd__(self, other):
 		if not isinstance(other, quickdot):
 			raise TypeError("can only add quickdot to quickdot")
+		for key, val in other.items():
+			if isinstance(val, quickdot):
+				self[key] += val
+			else:
+				self[key] = val
 		super().update(other)
 		return self
 
