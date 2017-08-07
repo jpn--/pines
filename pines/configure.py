@@ -131,7 +131,7 @@ def check_config(checklist, secrets, window_title="PINES CONFIG"):
         for check, ent in zip(checklist, ents):
             this_str = (ent.get())
             if this_str == "<None>":
-                _top_cfg[check] = None
+                _top_cfg[check] = quickdot()
             else:
                 try:
                     this_str = int(this_str)
@@ -144,7 +144,7 @@ def check_config(checklist, secrets, window_title="PINES CONFIG"):
         for check, ent in zip(secrets, secret_ents):
             this_str = (ent.get())
             if this_str == "<None>":
-                _secret_cfg[check] = None
+                _secret_cfg[check] = quickdot()
             else:
                 try:
                     this_str = int(this_str)
