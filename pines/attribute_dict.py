@@ -111,9 +111,14 @@ class quickdot(dict):
 	def __add__(self, other):
 		if not isinstance(other, quickdot):
 			raise TypeError("can only add quickdot to quickdot")
-		combo = self.copy()
+		combo = quickdot(self)
 		combo.update(other)
 		return combo
+	def __iadd__(self, other):
+		if not isinstance(other, quickdot):
+			raise TypeError("can only add quickdot to quickdot")
+		super().update(other)
+		return self
 
 def add_to_quickdot(qdot,tag,value):
 	if isinstance(tag,str):
