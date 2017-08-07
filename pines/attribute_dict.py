@@ -108,8 +108,12 @@ class quickdot(dict):
 				return False
 		else:
 			return super().__contains__(keys[0])
-
-
+	def __add__(self, other):
+		if not isinstance(other, quickdot):
+			raise TypeError("can only add quickdot to quickdot")
+		combo = self.copy()
+		combo.update(other)
+		return combo
 
 def add_to_quickdot(qdot,tag,value):
 	if isinstance(tag,str):
