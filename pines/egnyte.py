@@ -374,3 +374,11 @@ def get_access_token(username=None, password=None, return_token=False):
 	egnyte.configuration.save(client.config)
 	if return_token:
 		return result
+
+
+def set_access_token(token):
+	config = egnyte.configuration.load()
+	config['access_token'] = token
+	egnyte.configuration.save(config)
+
+	
