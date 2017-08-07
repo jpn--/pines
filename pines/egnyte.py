@@ -369,6 +369,8 @@ def get_access_token(username=None, password=None, return_token=False):
 	response_json = response.json()
 	if 'access_token' in response_json:
 		result = client.config['access_token'] = response_json['access_token']
+	else:
+		result = None
 	egnyte.configuration.save(client.config)
 	if return_token:
 		return result
