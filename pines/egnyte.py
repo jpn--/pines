@@ -354,15 +354,15 @@ def glob_upload_gz(pattern, egnyte_path, log=True, dryrun=False):
 
 
 
-def get_access_token():
+def get_access_token(username=None, password=None):
 	import requests, getpass
 	headers = {
 		'Content-Type': 'application/x-www-form-urlencoded',
 	}
 	data = [
 		('grant_type', 'password'),
-		('username', getpass.getpass("Username (not email, just name): ")),
-		('password', getpass.getpass("Password: ")),
+		('username', username or getpass.getpass("Username (not email, just name): ")),
+		('password', password or getpass.getpass("Password: ")),
 		('client_id', 'zxuez95f5utrrf7v2ukyex6y'),
 	]
 	response = requests.post('https://camsys.egnyte.com/puboauth/token', headers=headers, data=data)
