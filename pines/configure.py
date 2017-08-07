@@ -105,7 +105,7 @@ def check_config(checklist, secrets, window_title="PINES CONFIG"):
     for rownum, check in enumerate(checklist):
         ents.append(makeentry(master, check, width=90, row=rownum))
         ents[-1].delete(0, END)
-        if _top_cfg[check] is None:
+        if _top_cfg[check] is None or (isinstance(_top_cfg[check], quickdot) and len(_top_cfg[check])==0):
             this_str = "<None>"
         else:
             this_str = str(_top_cfg[check])
@@ -116,7 +116,7 @@ def check_config(checklist, secrets, window_title="PINES CONFIG"):
         secret_ents.append(makeentry(master, secret, width=90, row=rownum, show="\u2022"))
         secret_ents[-1].delete(0, END)
         if secret in _top_cfg:
-            if _top_cfg[secret] is None:
+            if _top_cfg[secret] is None or (isinstance(_top_cfg[secret], quickdot) and len(_top_cfg[secret])==0):
                 this_str = "<None>"
             else:
                 this_str = str(_top_cfg[secret])
