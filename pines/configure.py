@@ -77,9 +77,10 @@ def print_config(args=None):
 
 
 
-def check_config(checklist, window_title="PINES CONFIG"):
-    global _top_cfg
+def check_config(checklist, secrets, window_title="PINES CONFIG"):
+    global _top_cfg, _secret_cfg
     _top_cfg = load()
+    _secret_cfg = quickdot()
 
     from tkinter import Tk, Entry, Button, mainloop, END, Label, LEFT, BOTTOM
 
@@ -110,10 +111,23 @@ def check_config(checklist, window_title="PINES CONFIG"):
             this_str = str(_top_cfg[check])
         ents[-1].insert(0, this_str)
 
+    secret_ents = []
+    for rownum, secret in enumerate(secrets, start=rownum+1):
+        secret_ents.append(makeentry(master, secret, width=90, row=rownum, show="\u2022"))
+        secret_ents[-1].delete(0, END)
+        if secret in _top_cfg:
+            if _top_cfg[secret] is None:
+                this_str = "<None>"
+            else:
+                this_str = str(_top_cfg[secret])
+        else:
+            this_str = ""
+        secret_ents[-1].insert(0, this_str)
+
     ents[0].focus_set()
 
     def callback_onetime():
-        global _top_cfg
+        global _top_cfg, _secret_cfg
         for check, ent in zip(checklist, ents):
             this_str = (ent.get())
             if this_str == "<None>":
@@ -127,6 +141,19 @@ def check_config(checklist, window_title="PINES CONFIG"):
                     except ValueError:
                         pass
                 _top_cfg[check] = this_str
+        for check, ent in zip(secrets, secret_ents):
+            this_str = (ent.get())
+            if this_str == "<None>":
+                _secret_cfg[check] = None
+            else:
+                try:
+                    this_str = int(this_str)
+                except ValueError:
+                    try:
+                        this_str = float(this_str)
+                    except ValueError:
+                        pass
+                _secret_cfg[check] = this_str
         master.destroy()
 
     def callback_save():
@@ -138,5 +165,5 @@ def check_config(checklist, window_title="PINES CONFIG"):
     b2 = Button(master, text = "OK - Save to Config File", width = 20, command = callback_save)
     b2.grid(row=rownum+2,column=0, columnspan=2)
     mainloop()
-    return _top_cfg
+    return _top_cfg + _secret_cfg
 
