@@ -103,10 +103,9 @@ def TemporaryDirectory(common=True):
 	global _tempdir
 	if common and _tempdir is not None:
 		return _tempdir
-	t = tempfile.mkdtemp()
+	t = tempfile.TemporaryDirectory()
 	global TemporaryBucket
-	from .attribute_dict import dicta
-	TemporaryBucket.append(dicta(name=t))
+	TemporaryBucket.append(t)
 	if common:
 		_tempdir = t
 	return t

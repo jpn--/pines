@@ -347,6 +347,7 @@ def import_remote_python_package( egnyte_path, package_name=None, log=True ):
 	else:
 		return importlib.import_module(package_name)
 
+# from pines.egnyte import import_remote_python_package
 # import_remote_python_package('/Private/jnewman/PyAccess/werter', 'werter')
 
 def glob_upload_gz(pattern, egnyte_path, log=True, dryrun=False):
