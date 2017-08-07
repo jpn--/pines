@@ -4,8 +4,9 @@ from . import configure
 _time_format = '%b %d %H:%M:%S'
 _mess_format = '%(asctime)15s %(name)s %(levelname)s %(message)s'
 
-def new_worker(scheduler=None, name=None, **kwargs):
-	cfg = configure.check_config(['cluster.worker_log', 'cluster.scheduler'], window_title="PINES CLUSTER WORKER CONFIG")
+def new_worker(scheduler=None, name=None, cfg=None, **kwargs):
+	if cfg is None:
+		cfg = configure.check_config(['cluster.worker_log', 'cluster.scheduler'], window_title="PINES CLUSTER WORKER CONFIG")
 	if 'worker_log' in cfg.cluster:
 		import logging, logging.handlers
 		handler = logging.handlers.RotatingFileHandler(cfg.cluster['worker_log'], 'a', 10000, 10)
