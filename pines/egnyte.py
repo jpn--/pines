@@ -328,6 +328,14 @@ def bulk_download( egnyte_path, local_dir, log=True, overwrite=False ):
 		client.bulk_download(egnyte_path, local_dir, overwrite=overwrite, progress_callbacks=ProgressCallbacks() if log else None)
 
 
+def import_remote_python_package( egnyte_path, package_name, log=True ):
+	import tempfile, sys, importlib
+	tempdir = tempfile.TemporaryDirectory()
+	client.bulk_download([egnyte_path], tempdir.name, overwrite=True,
+	                     progress_callbacks=ProgressCallbacks() if log else None)
+	sys.path.insert(0, tempdir.name)
+	importlib.invalidate_caches()
+	return importlib.import_module(package_name)
 
 def glob_upload_gz(pattern, egnyte_path, log=True, dryrun=False):
 	"""
@@ -381,4 +389,3 @@ def set_access_token(token):
 	config['access_token'] = token
 	egnyte.configuration.save(config)
 
-	
