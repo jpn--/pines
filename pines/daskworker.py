@@ -4,7 +4,7 @@ from . import configure
 _time_format = '%b %d %H:%M:%S'
 _mess_format = '%(asctime)15s %(name)s %(levelname)s %(message)s'
 
-def new_worker(scheduler=None, name=None, cfg=None, **kwargs):
+def new_worker(scheduler=None, name=None, cfg=None, gui_loop_callback=None, **kwargs):
 	if cfg is None:
 		cfg = configure.check_config(['cluster.worker_log', 'cluster.scheduler'], window_title="PINES CLUSTER WORKER CONFIG")
 	if 'worker_log' in cfg.cluster:
@@ -42,7 +42,10 @@ def new_worker(scheduler=None, name=None, cfg=None, **kwargs):
 
 	w = Worker(scheduler_location, loop=loop, name=name, **kwargs)
 	w.start()  # choose randomly assigned port
-	
+
+	if gui_loop_callback is not None:
+		gui_loop_callback(w, cfg)
+
 	t.join()
 
 	logging.getLogger('distributed').critical(f"ending worker {name} for {scheduler_location}")
