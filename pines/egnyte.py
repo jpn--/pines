@@ -328,14 +328,26 @@ def bulk_download( egnyte_path, local_dir, log=True, overwrite=False ):
 		client.bulk_download(egnyte_path, local_dir, overwrite=overwrite, progress_callbacks=ProgressCallbacks() if log else None)
 
 
-def import_remote_python_package( egnyte_path, package_name, log=True ):
-	import tempfile, sys, importlib
-	tempdir = tempfile.TemporaryDirectory()
+def import_remote_python_package( egnyte_path, package_name=None, log=True ):
+	if package_name is None:
+		if egnyte_path[-1] in ('/','\\'):
+			package_name = os.path.basename(egnyte_path[:-1])
+		else:
+			package_name = os.path.basename(egnyte_path[:])
+	import sys, importlib
+	from .temporary import TemporaryDirectory
+	tempdir = TemporaryDirectory()
 	client.bulk_download([egnyte_path], tempdir.name, overwrite=True,
 	                     progress_callbacks=ProgressCallbacks() if log else None)
-	sys.path.insert(0, tempdir.name)
+	if tempdir.name not in sys.path:
+		sys.path.insert(0, tempdir.name)
 	importlib.invalidate_caches()
-	return importlib.import_module(package_name)
+	if package_name in sys.modules:
+		return importlib.reload(package_name)
+	else:
+		return importlib.import_module(package_name)
+
+# import_remote_python_package('/Private/jnewman/PyAccess/werter', 'werter')
 
 def glob_upload_gz(pattern, egnyte_path, log=True, dryrun=False):
 	"""
