@@ -27,8 +27,11 @@ def new_worker(scheduler=None, name=None, cfg=None, **kwargs):
 	from threading import Thread
 
 	if name is None:
-		import socket
-		name = socket.getfqdn()
+		if 'worker_name' in cfg.cluster:
+			name = cfg.cluster['worker_name']
+		else:
+			import socket
+			name = socket.getfqdn()
 
 	loop = IOLoop.current()
 	t = Thread(target=loop.start, daemon=True)
