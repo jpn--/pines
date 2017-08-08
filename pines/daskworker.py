@@ -67,6 +67,7 @@ def receive_tar_package(s, packagename=None):
 	result = extract_targz_string(s, path=use_path)
 	if packagename is not None:
 		import sys, importlib
+		importlib.invalidate_caches()
 		if packagename in sys.modules:
 			importlib.reload(sys.modules[packagename])
 		else:
