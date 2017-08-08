@@ -5,7 +5,12 @@ import os
 _time_format = '%b %d %H:%M:%S'
 _mess_format = '%(asctime)15s %(name)s %(levelname)s %(message)s'
 
+
+_worker_local_dir = None
+
+
 def new_worker(scheduler=None, name=None, cfg=None, gui_loop_callback=None, **kwargs):
+	global _worker_local_dir
 	if cfg is None:
 		cfg = configure.check_config(['cluster.worker_log', 'cluster.scheduler'], window_title="PINES CLUSTER WORKER CONFIG")
 	if 'worker_log' in cfg.cluster:
@@ -44,7 +49,7 @@ def new_worker(scheduler=None, name=None, cfg=None, gui_loop_callback=None, **kw
 	w = Worker(scheduler_location, loop=loop, name=name, **kwargs)
 	w.start()  # choose randomly assigned port
 
-	os.chdir(w.local_dir)
+	_worker_local_dir = w.local_dir
 
 	if gui_loop_callback is not None:
 		gui_loop_callback(w, cfg)
@@ -52,6 +57,54 @@ def new_worker(scheduler=None, name=None, cfg=None, gui_loop_callback=None, **kw
 	t.join()
 
 	logging.getLogger('distributed').critical(f"ending worker {name} for {scheduler_location}")
+
+
+
+def receive_tar_package(s):
+	global _worker_local_dir
+	from .tar import extract_targz_string
+	use_path = _worker_local_dir or "."
+	return extract_targz_string(s, path=use_path)
+
+
+def send_package_to_dask_workers(directory, scheduler_ip=None, client=None):
+	"""
+	Send a package to all workers
+
+	One of client and scheduler_ip should be given.
+
+	Parameters
+	----------
+	directory : str
+	scheduler_ip : str
+		ignored if client is given
+	client : dask.distributed.Client
+
+	"""
+	from .tar import directory_to_targz_string
+	if client is None:
+		if scheduler_ip is None:
+			raise ValueError("must give scheduler or client")
+		from dask.distributed import Client
+		if isinstance(scheduler_ip, Client):
+			client = scheduler_ip
+		elif isinstance(scheduler_ip, str):
+			client = Client(f"{scheduler_ip}:8786")
+		else:
+			raise TypeError("bad scheduler")
+	from dask.distributed import wait
+	s = directory_to_targz_string(directory)
+	versions = client.get_versions()
+	if 'workers' in versions:
+		workers = versions['workers'].keys()
+		futures = [client.submit(receive_tar_package, s, workers=[w]) for w in workers]
+		wait(futures)
+		return futures
+	else:
+		raise ValueError('no workers')
+
+
+
 
 if __name__=='__main__':
 	w=new_worker()
