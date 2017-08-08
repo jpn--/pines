@@ -40,7 +40,10 @@ def extract_targz_string(s, path=".", members=None, return_listdir=True):
 		with tarfile.open(fileobj=bt,mode='r:gz') as tf:
 			tf.extractall(path=path, members=members)
 	if return_listdir:
-		return os.listdir(path)
+		if path==".":
+			return os.getcwd(), os.listdir(path)
+		else:
+			return path, os.listdir(path)
 
 
 def send_package_to_dask_workers(directory, scheduler_ip=None, client=None):
