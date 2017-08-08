@@ -104,17 +104,18 @@ def send_package_to_dask_workers(directory, scheduler_ip=None, client=None):
 	from dask.distributed import wait
 	package_name = os.path.basename( directory.rstrip("/").rstrip("\\") )
 	s = directory_to_targz_string(directory)
-	versions = client.get_versions()
-	if 'workers' in versions:
-		workers = versions['workers'].keys()
-		futures = []
-		for w in workers:
-			logging.getLogger('distributed').info(f"sending {package_name} to {w}")
-			futures.append(client.run(receive_tar_package, s, package_name, workers=[w.strip('tcp://').split(':')[0]]) )
-		wait(futures)
-		return futures
-	else:
-		raise ValueError('no workers')
+	client.run(receive_tar_package, s, package_name)
+	# versions = client.get_versions()
+	# if 'workers' in versions:
+	# 	workers = versions['workers'].keys()
+	# 	futures = []
+	# 	for w in workers:
+	# 		logging.getLogger('distributed').info(f"sending {package_name} to {w}")
+	# 		futures.append(client.run(receive_tar_package, s, package_name, workers=[w.strip('tcp://').split(':')[0]]) )
+	# 	wait(futures)
+	# 	return futures
+	# else:
+	# 	raise ValueError('no workers')
 
 
 
