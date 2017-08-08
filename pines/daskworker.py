@@ -1,6 +1,7 @@
 
 from . import configure
 import os
+import logging, logging.handlers
 
 _time_format = '%b %d %H:%M:%S'
 _mess_format = '%(asctime)15s %(name)s %(levelname)s %(message)s'
@@ -14,7 +15,6 @@ def new_worker(scheduler=None, name=None, cfg=None, gui_loop_callback=None, **kw
 	if cfg is None:
 		cfg = configure.check_config(['cluster.worker_log', 'cluster.scheduler'], window_title="PINES CLUSTER WORKER CONFIG")
 	if 'worker_log' in cfg.cluster:
-		import logging, logging.handlers
 		handler = logging.handlers.RotatingFileHandler(cfg.cluster['worker_log'], 'a', 10000, 10)
 		formatter = logging.Formatter(fmt=_mess_format, datefmt=_time_format)
 		handler.setFormatter(formatter)
@@ -105,7 +105,10 @@ def send_package_to_dask_workers(directory, scheduler_ip=None, client=None):
 	versions = client.get_versions()
 	if 'workers' in versions:
 		workers = versions['workers'].keys()
-		futures = [client.submit(receive_tar_package, s, package_name, workers=[w]) for w in workers]
+		futures = []
+		for w in workers:
+			logging.getLogger('distributed').info(f"sending {package_name} to {w}")
+			futures.append(client.submit(receive_tar_package, s, package_name, workers=[w]) )
 		wait(futures)
 		return futures
 	else:
