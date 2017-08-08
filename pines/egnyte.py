@@ -339,6 +339,7 @@ def _sha512_checksum(filename, block_size=65536):
 
 def _pines_bulk_download_worker(items, root_path, local_dir, overwrite, progress_callbacks):
 	import collections, shutil
+	any_updates = False
 	root_len = len(root_path.rstrip('/')) + 1
 	queue = collections.deque(items)
 	while True:
@@ -381,7 +382,9 @@ def _pines_bulk_download_worker(items, root_path, local_dir, overwrite, progress
 					continue
 			progress_callbacks.download_start(local_path, obj, obj.size)
 			obj.download().save_to(local_path, progress_callbacks.download_progress)
+			any_updates = True
 			progress_callbacks.download_finish(obj)
+	return any_updates
 
 
 def _pines_bulk_download( paths, local_dir, overwrite=False, progress_callbacks=None):
@@ -403,15 +406,16 @@ def _pines_bulk_download( paths, local_dir, overwrite=False, progress_callbacks=
 			items = obj.files + obj.folders
 		else:
 			items = (obj,)
-		_pines_bulk_download_worker(items, root_path, local_dir, overwrite, progress_callbacks)
+		result = _pines_bulk_download_worker(items, root_path, local_dir, overwrite, progress_callbacks)
 	progress_callbacks.finished()
+	return result
 
 
 def bulk_download_smart( egnyte_path, local_dir, log=True, overwrite=False ):
 	if isinstance(egnyte_path, str):
-		_pines_bulk_download([egnyte_path], local_dir, overwrite=overwrite, progress_callbacks=ProgressCallbacks() if log else None)
+		return _pines_bulk_download([egnyte_path], local_dir, overwrite=overwrite, progress_callbacks=ProgressCallbacks() if log else None)
 	else:
-		_pines_bulk_download(egnyte_path, local_dir, overwrite=overwrite, progress_callbacks=ProgressCallbacks() if log else None)
+		return _pines_bulk_download(egnyte_path, local_dir, overwrite=overwrite, progress_callbacks=ProgressCallbacks() if log else None)
 
 
 
