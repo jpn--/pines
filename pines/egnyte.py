@@ -428,13 +428,16 @@ def import_remote_python_package( egnyte_path, package_name=None, log=True ):
 	import sys, importlib
 	from .temporary import TemporaryDirectory
 	tempdir = TemporaryDirectory()
-	client.bulk_download([egnyte_path], tempdir.name, overwrite=True,
+	any_updates = bulk_download_smart([egnyte_path], tempdir.name, overwrite=True,
 	                     progress_callbacks=ProgressCallbacks() if log else None)
 	if tempdir.name not in sys.path:
 		sys.path.insert(0, tempdir.name)
 	importlib.invalidate_caches()
 	if package_name in sys.modules:
-		return importlib.reload(sys.modules[package_name])
+		if any_updates:
+			return importlib.reload(sys.modules[package_name])
+		else:
+			return sys.modules[package_name]
 	else:
 		return importlib.import_module(package_name)
 
