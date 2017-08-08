@@ -60,11 +60,18 @@ def new_worker(scheduler=None, name=None, cfg=None, gui_loop_callback=None, **kw
 
 
 
-def receive_tar_package(s):
+def receive_tar_package(s, packagename=None):
 	global _worker_local_dir
 	from .tar import extract_targz_string
 	use_path = _worker_local_dir or "."
-	return extract_targz_string(s, path=use_path)
+	result = extract_targz_string(s, path=use_path)
+	if packagename is not None:
+		import sys, importlib
+		if packagename in sys.modules:
+			importlib.reload(sys.modules[packagename])
+		else:
+			importlib.import_module(packagename)
+	return result
 
 
 def send_package_to_dask_workers(directory, scheduler_ip=None, client=None):
@@ -93,11 +100,12 @@ def send_package_to_dask_workers(directory, scheduler_ip=None, client=None):
 		else:
 			raise TypeError("bad scheduler")
 	from dask.distributed import wait
+	package_name = os.path.basename( directory.rstrip("/").rstrip("\\") )
 	s = directory_to_targz_string(directory)
 	versions = client.get_versions()
 	if 'workers' in versions:
 		workers = versions['workers'].keys()
-		futures = [client.submit(receive_tar_package, s, workers=[w]) for w in workers]
+		futures = [client.submit(receive_tar_package, s, package_name, workers=[w]) for w in workers]
 		wait(futures)
 		return futures
 	else:
