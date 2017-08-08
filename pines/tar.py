@@ -39,3 +39,34 @@ def extract_targz_string(s,*args,**kwargs):
 			tf.extractall(*args,**kwargs)
 
 
+def send_package_to_dask_workers(directory, scheduler_ip=None, client=None):
+	"""
+	Send a package to all workers
+
+	One of client and scheduler_ip should be given.
+
+	Parameters
+	----------
+	directory : str
+	scheduler_ip : str
+		ignored if client is given
+	client : dask.distributed.Client
+
+	"""
+	if client is None:
+		if scheduler_ip is None:
+			raise ValueError("must give scheduler or client")
+		from dask.distributed import Client
+		if isinstance(scheduler_ip, Client):
+			client = scheduler_ip
+		elif isinstance(scheduler_ip, str):
+			client = Client(f"{scheduler_ip}:8786")
+		else:
+			raise TypeError("bad scheduler")
+	from dask.distributed import wait
+	s = directory_to_targz_string(directory)
+	versions = client.get_versions()
+	if 'workers' in versions:
+		workers = versions['workers'].keys()
+		futures = [client.submit(extract_targz_string, s, workers=[w]) for w in workers]
+		wait(futures)
