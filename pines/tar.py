@@ -19,7 +19,7 @@ def directory_to_targz_string(directory):
 		s=bt.read()
 	return s
 
-def extract_targz_string(s,*args,**kwargs):
+def extract_targz_string(s, path=".", members=None, return_listdir=True):
 	"""
 	restore a tar-gzipped directory
 
@@ -29,6 +29,8 @@ def extract_targz_string(s,*args,**kwargs):
 		Content to ungzip and untar
 	path : str
 		Where to extract, defaults to current working directory.
+	members : list
+		see tarfile.extractall
 
 	"""
 	import io,tarfile
@@ -36,7 +38,9 @@ def extract_targz_string(s,*args,**kwargs):
 		bt.write(s)
 		bt.seek(0)
 		with tarfile.open(fileobj=bt,mode='r:gz') as tf:
-			tf.extractall(*args,**kwargs)
+			tf.extractall(path=path, members=members)
+	if return_listdir:
+		return os.listdir(path)
 
 
 def send_package_to_dask_workers(directory, scheduler_ip=None, client=None):
