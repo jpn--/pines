@@ -21,6 +21,7 @@ def directory_to_targz_string(directory):
 
 def extract_targz_string(s,*args,**kwargs):
 	"""
+	restore a tar-gzipped directory
 
 	Parameters
 	----------
