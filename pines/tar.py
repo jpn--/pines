@@ -70,3 +70,6 @@ def send_package_to_dask_workers(directory, scheduler_ip=None, client=None):
 		workers = versions['workers'].keys()
 		futures = [client.submit(extract_targz_string, s, workers=[w]) for w in workers]
 		wait(futures)
+		return futures
+	else:
+		raise ValueError('no workers')
