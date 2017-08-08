@@ -1,5 +1,6 @@
 
 from . import configure
+import os
 
 _time_format = '%b %d %H:%M:%S'
 _mess_format = '%(asctime)15s %(name)s %(levelname)s %(message)s'
@@ -42,6 +43,8 @@ def new_worker(scheduler=None, name=None, cfg=None, gui_loop_callback=None, **kw
 
 	w = Worker(scheduler_location, loop=loop, name=name, **kwargs)
 	w.start()  # choose randomly assigned port
+
+	os.chdir(w.local_dir)
 
 	if gui_loop_callback is not None:
 		gui_loop_callback(w, cfg)
