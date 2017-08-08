@@ -2,6 +2,7 @@ import os.path
 import egnyte
 import re
 import time
+import hashlib
 
 from .logger import flogger
 from .bytesize import bytes_scaled
@@ -326,6 +327,92 @@ def bulk_download( egnyte_path, local_dir, log=True, overwrite=False ):
 		client.bulk_download([egnyte_path], local_dir, overwrite=overwrite, progress_callbacks=ProgressCallbacks() if log else None)
 	else:
 		client.bulk_download(egnyte_path, local_dir, overwrite=overwrite, progress_callbacks=ProgressCallbacks() if log else None)
+
+
+
+def _sha512_checksum(filename, block_size=65536):
+	sha512 = hashlib.sha512()
+	with open(filename, 'rb') as f:
+		for block in iter(lambda: f.read(block_size), b''):
+			sha512.update(block)
+	return sha512.hexdigest()
+
+def _pines_bulk_download_worker(items, root_path, local_dir, overwrite, progress_callbacks):
+	import collections, shutil
+	root_len = len(root_path.rstrip('/')) + 1
+	queue = collections.deque(items)
+	while True:
+		try:
+			obj = queue.popleft()
+		except IndexError:
+			break
+		relpath = obj.path[root_len:].strip('/')
+		local_path = os.path.join(local_dir, relpath.replace('/', os.sep))
+		dir_path = os.path.dirname(local_path)
+		if not os.path.isdir(dir_path):
+			if os.path.exists(dir_path):
+				if overwrite:
+					os.unlink(local_path)
+				else:
+					progress_callbacks.skipped(obj, "Existing file conflicts with cloud folder")
+					continue
+			os.makedirs(dir_path)
+		if obj.is_folder:
+			# schedule contents for later, files first
+			if obj.files is None:
+				progress_callbacks.getting_info(obj.path)
+				obj.list()
+				progress_callbacks.got_info(obj)
+			queue.extend(obj.files)
+			queue.extend(obj.folders)
+		else:
+			if os.path.exists(local_path):
+				if overwrite:
+					# read local checksum
+					if _sha512_checksum(local_path) != obj.checksum:
+						if os.path.isdir(local_path) and not os.path.islink(local_path):
+							shutil.rmtree(local_path)
+						else:
+							os.unlink(local_path)
+					else:
+						continue
+				else:
+					progress_callbacks.skipped(obj, "Existing file conflicts with cloud file")
+					continue
+			progress_callbacks.download_start(local_path, obj, obj.size)
+			obj.download().save_to(local_path, progress_callbacks.download_progress)
+			progress_callbacks.download_finish(obj)
+
+
+def _pines_bulk_download( paths, local_dir, overwrite=False, progress_callbacks=None):
+	"""
+	Transfer many files or directories to Cloud File System.
+
+	* paths - list of local file paths
+	* target - Path in CFS to upload to
+	* progress_callbacks - Callback object (see ProgressCallbacks)
+	"""
+	if progress_callbacks is None:
+		progress_callbacks = ProgressCallbacks()
+	for path in paths:
+		progress_callbacks.getting_info(path)
+		obj = client.get(path)
+		progress_callbacks.got_info(obj)
+		root_path = path[:path.rstrip('/').rfind('/')]  # take all segments expect last one
+		if obj.is_folder:
+			items = obj.files + obj.folders
+		else:
+			items = (obj,)
+		_pines_bulk_download_worker(items, root_path, local_dir, overwrite, progress_callbacks)
+	progress_callbacks.finished()
+
+
+def bulk_download_smart( egnyte_path, local_dir, log=True, overwrite=False ):
+	if isinstance(egnyte_path, str):
+		_pines_bulk_download([egnyte_path], local_dir, overwrite=overwrite, progress_callbacks=ProgressCallbacks() if log else None)
+	else:
+		_pines_bulk_download(egnyte_path, local_dir, overwrite=overwrite, progress_callbacks=ProgressCallbacks() if log else None)
+
 
 
 def import_remote_python_package( egnyte_path, package_name=None, log=True ):
