@@ -110,7 +110,7 @@ def send_package_to_dask_workers(directory, scheduler_ip=None, client=None):
 		futures = []
 		for w in workers:
 			logging.getLogger('distributed').info(f"sending {package_name} to {w}")
-			futures.append(client.submit(receive_tar_package, s, package_name, workers=[w]) )
+			futures.append(client.submit(receive_tar_package, s, package_name, workers=[w.strip('tcp://').split(':')[0]]) )
 		wait(futures)
 		return futures
 	else:
