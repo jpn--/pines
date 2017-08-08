@@ -65,14 +65,15 @@ def receive_tar_package(s, packagename=None):
 	from .tar import extract_targz_string
 	use_path = _worker_local_dir or "."
 	result = extract_targz_string(s, path=use_path)
+	mod = None
 	if packagename is not None:
 		import sys, importlib
 		importlib.invalidate_caches()
 		if packagename in sys.modules:
-			importlib.reload(sys.modules[packagename])
+			mod = importlib.reload(sys.modules[packagename])
 		else:
-			importlib.import_module(packagename)
-	return result
+			mod = importlib.import_module(packagename)
+	return result, mod
 
 
 def send_package_to_dask_workers(directory, scheduler_ip=None, client=None):
