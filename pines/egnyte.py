@@ -579,4 +579,4 @@ class HashStore():
 		return self._upload(key, value)
 
 	def __contains__(self, item):
-		return item in self._folder_obj.folders
+		return phash(item)+'.pickle' in self._folder_obj.files
