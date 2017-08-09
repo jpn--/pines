@@ -517,7 +517,7 @@ class HashStore():
 			_load_obj(self._folder_obj)
 			self._loaded = True
 
-	def _upload(self, key, value, retries=10, interval=1):
+	def _upload(self, key, value, retries=10, interval=1, ph=None):
 		"""
 
 		Parameters
@@ -531,8 +531,12 @@ class HashStore():
 		progress_callbacks
 
 		"""
-
-		basename = phash(key)+'.pickle'
+		if ph is None:
+			basename = phash(key)+'.pickle'
+		else:
+			if key is not None:
+				raise ValueError("do not give both ph and key")
+			basename = ph + '.pickle'
 		file_obj = client.file(pth(self.egnyte_path, basename))
 		buffer = io.BytesIO(pickle.dumps(value))
 		self.progress_callbacks.upload_start("hashstore", file_obj, buffer.tell())
@@ -546,8 +550,13 @@ class HashStore():
 				break
 		self.progress_callbacks.upload_finish(file_obj)
 
-	def _download(self, key, retries=10, interval=1):
-		basename = phash(key)+'.pickle'
+	def _download(self, key, retries=10, interval=1, ph=None):
+		if ph is None:
+			basename = phash(key)+'.pickle'
+		else:
+			if key is not None:
+				raise ValueError("do not give both ph and key")
+			basename = ph + '.pickle'
 		try:
 			file_obj = client.file(pth(self.egnyte_path, basename))
 			buffer = io.BytesIO()
@@ -587,3 +596,9 @@ class HashStore():
 	def __contains__(self, item):
 		self._load_info()
 		return phash(item)+'.pickle' in self._folder_obj.files
+
+	def download_ph(self, ph):
+		return self._download(None, ph=ph)
+
+	def upload_ph(self, ph, value):
+		return self._upload(None, value, ph=ph)
