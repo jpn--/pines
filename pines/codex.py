@@ -12,5 +12,5 @@ def inflate(squeezed):
     return pickle.loads(zlib.decompress(base64.standard_b64decode(squeezed)))
 
 
-def hash(x):
+def phash(x):
     return hashlib.sha256(pickle.dumps(x)).hexdigest()

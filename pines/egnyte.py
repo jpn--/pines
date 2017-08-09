@@ -3,9 +3,12 @@ import egnyte
 import re
 import time
 import hashlib
+import pickle
+import io
 
 from .logger import flogger
 from .bytesize import bytes_scaled
+from .codex import phash
 
 elog = flogger(label='EGNYTE')
 
@@ -496,3 +499,83 @@ def set_access_token(token):
 	config['access_token'] = token
 	egnyte.configuration.save(config)
 
+
+
+class HashStore():
+
+	def __init__(self, egnyte_path, progress_callbacks=None):
+		self.egnyte_path = egnyte_path
+		self.progress_callbacks = progress_callbacks or ProgressCallbacks()
+		self._cache = {}
+		self._folder_obj = client.folder(pth(self.egnyte_path))
+		_load_obj(self._folder_obj)
+
+	def _upload(self, key, value, retries=10, interval=1):
+		"""
+
+		Parameters
+		----------
+		dictionary : dict
+			The dictionary to convert to json and upload to egnyte
+		filename : str
+			A filename for the file that will be created in egnyte
+		egnyte_path : str
+			The (existing) folder in egnyte where the file will be created
+		progress_callbacks
+
+		"""
+
+		basename = phash(key)+'.pickle'
+		file_obj = client.file(pth(self.egnyte_path, basename))
+		buffer = io.BytesIO(pickle.dumps(value))
+		self.progress_callbacks.upload_start("hashstore", file_obj, buffer.tell())
+		for i in range(retries):
+			try:
+				file_obj.upload(buffer)
+			except egnyte.exc.NotAuthorized:
+				elog('upload NotAuthorized: '+str(file_obj).replace('{','[').replace('}',']'))
+				time.sleep(interval)
+			else:
+				break
+		self.progress_callbacks.upload_finish(file_obj)
+
+	def _download(self, key, retries=10, interval=1):
+		basename = phash(key)+'.pickle'
+		try:
+			file_obj = client.file(pth(self.egnyte_path, basename))
+			buffer = io.BytesIO()
+			_load_obj(file_obj)
+			try:
+				self.progress_callbacks.download_start('hashstore', file_obj, file_obj.size)
+			except egnyte.exc.NotAuthorized:
+				self.progress_callbacks.download_start('hashstore', file_obj, -1)
+			for i in range(retries):
+				try:
+					file_obj.download().write_to(buffer, self.progress_callbacks.download_progress)
+				except egnyte.exc.NotAuthorized:
+					elog('download NotAuthorized: ' + str(file_obj).replace('{', '[').replace('}', ']'))
+					time.sleep(interval)
+				else:
+					break
+			buffer.seek(0)
+			result = pickle.loads(buffer.getvalue())
+			self.progress_callbacks.download_finish(file_obj)
+			return result
+		except egnyte.exc.NotFound:
+			raise KeyError(f'hashstore:{basename}')
+
+	def __getitem__(self, item):
+		ph = phash(item)
+		if ph in self._cache:
+			return self._cache[ph]
+		x = self._download(item)
+		self._cache[ph] = x
+		return x
+
+	def __setitem__(self, key, value):
+		ph = phash(key)
+		self._cache[ph] = value
+		return self._upload(key, value)
+
+	def __contains__(self, item):
+		return item in self._folder_obj.folders
