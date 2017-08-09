@@ -10,7 +10,7 @@ _mess_format = '%(asctime)15s %(name)s %(levelname)s %(message)s'
 _worker_local_dir = None
 
 
-def new_worker(scheduler=None, name=None, cfg=None, gui_loop_callback=None, **kwargs):
+def new_worker(scheduler=None, name=None, cfg=None, gui_loop_callback=None, resources=None, **kwargs):
 	global _worker_local_dir
 	if cfg is None:
 		cfg = configure.check_config(['cluster.worker_log', 'cluster.scheduler'], window_title="PINES CLUSTER WORKER CONFIG")
@@ -46,7 +46,10 @@ def new_worker(scheduler=None, name=None, cfg=None, gui_loop_callback=None, **kw
 	scheduler_location = f'tcp://{scheduler}:8786'
 	logging.getLogger('distributed').info(f"starting worker {name} for {scheduler_location}")
 
-	w = Worker(scheduler_location, loop=loop, name=name, **kwargs)
+	if resources:
+		logging.getLogger('distributed').info(f"worker {name} has resources {str(resources)}")
+
+	w = Worker(scheduler_location, loop=loop, name=name, resources=resources, **kwargs)
 	w.start()  # choose randomly assigned port
 
 	_worker_local_dir = w.local_dir
@@ -87,6 +90,7 @@ def receive_tar_package(s, packagename=None):
 			logging.getLogger('distributed').critical(f"Adding {packagename} to sys.modules")
 			import sys
 			sys.modules[packagename] = mod
+		importlib.invalidate_caches()
 	return result, mod
 
 
