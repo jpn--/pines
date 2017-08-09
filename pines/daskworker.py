@@ -83,6 +83,10 @@ def receive_tar_package(s, packagename=None):
 			except ModuleNotFoundError:
 				logging.getLogger('distributed').critical(f"ModuleNotFoundError on {packagename}")
 				mod = None
+		if mod is not None:
+			logging.getLogger('distributed').critical(f"Adding {packagename} to sys.modules")
+			import sys
+			sys.modules[packagename] = mod
 	return result, mod
 
 
