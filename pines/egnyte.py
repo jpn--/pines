@@ -503,12 +503,13 @@ def set_access_token(token):
 
 class HashStore():
 
-	def __init__(self, egnyte_path, progress_callbacks=None):
+	def __init__(self, egnyte_path, progress_callbacks=None, preload=True):
 		self.egnyte_path = egnyte_path
 		self.progress_callbacks = progress_callbacks or ProgressCallbacks()
 		self._cache = {}
 		self._folder_obj = client.folder(pth(self.egnyte_path))
-		_load_obj(self._folder_obj)
+		if preload:
+			_load_obj(self._folder_obj)
 
 	def _upload(self, key, value, retries=10, interval=1):
 		"""
