@@ -4,7 +4,7 @@ flog = flogger(label="BUSYDIR")
 import os
 import time
 from contextlib import contextmanager
-
+from threading import Lock
 
 @contextmanager
 def locked_directory(dirname, retry_after=5, timeout=600, busy_flag="__BUSY__"):
@@ -61,4 +61,31 @@ def lock_for_time(dirname, delay=10, retry_after=5, timeout=600, busy_flag="__BU
 	t.start()
 
 
+_lockers = {}
+
+@contextmanager
+def locker(name, retry_after=15, timeout=300):
+
+	global _lockers
+	if name not in _lockers:
+		_lockers[name] = Lock()
+
+	while True:
+		have_lock = _lockers[name].acquire(timeout=retry_after)
+		if have_lock:
+			break
+		else:
+			timeout -= retry_after
+			if timeout<=0:
+				raise BlockingIOError(f'locked {name} is stuck')
+			else:
+				flog.info(f"waiting on lock for {name}")
+
+	try:
+		# do something...
+		flog.info(f"locking {name}")
+		yield name
+	finally:
+		flog.info(f"releasing {name}")
+		_lockers[name].release()
 
