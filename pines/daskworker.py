@@ -78,7 +78,11 @@ def receive_tar_package(s, packagename=None):
 			mod = importlib.reload(sys.modules[packagename])
 		else:
 			logging.getLogger('distributed').critical(f"received package {packagename} does not already exist, importing")
-			mod = importlib.import_module(packagename)
+			try:
+				mod = importlib.import_module(packagename)
+			except ModuleNotFoundError:
+				logging.getLogger('distributed').critical(f"ModuleNotFoundError on {packagename}")
+				mod = None
 	return result, mod
 
 
