@@ -4,7 +4,7 @@
 
 class stored_dict(dict):
 	'''Provide a persistent storage mechanism for use with DB objects.'''
-	def __init__(self, db, name, *, reverse_index=False, key="id", value="value", key_format="", value_format="", overwrite_mechanism="REPLACE"):
+	def __init__(self, db, name, *, reverse_index=False, key="id", value="value", key_format="", value_format="", overwrite_mechanism="REPLACE", autocommit=True):
 		super().__init__()
 		self.keycol = key
 		self.valuecol = value
@@ -12,6 +12,7 @@ class stored_dict(dict):
 		self.name = name
 		self.cur = db.cursor()
 		self.overwrite_mechanism = overwrite_mechanism
+		self.autocommit = autocommit
 		self.cur.execute("CREATE TABLE IF NOT EXISTS {0} ({1} {2} PRIMARY KEY, {3} {4})".format(name,key,key_format,value,value_format))
 		for row in self.cur.execute("SELECT {0}, {1} FROM {2}".format(key,value,name)):
 			super().__setitem__(row[0], row[1])
@@ -37,6 +38,8 @@ class stored_dict(dict):
 		elif (key in self and self[key] != value):
 			self.cur.execute("UPDATE {0} SET {2}=? WHERE {1}=?".format(self.name,self.keycol,self.valuecol),(value,key))
 			super().__setitem__(key, value)
+		if self.autocommit:
+			self.db.commit()
 	def begin_transaction(self):
 		self.cur.execute("BEGIN TRANSACTION;")
 	def end_transaction(self):
