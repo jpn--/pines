@@ -508,8 +508,14 @@ class HashStore():
 		self.progress_callbacks = progress_callbacks or ProgressCallbacks()
 		self._cache = {}
 		self._folder_obj = client.folder(pth(self.egnyte_path))
+		self._loaded = False
 		if preload:
+			self._load_info()
+
+	def _load_info(self, force=False):
+		if not self._loaded or force:
 			_load_obj(self._folder_obj)
+			self._loaded = True
 
 	def _upload(self, key, value, retries=10, interval=1):
 		"""
@@ -579,4 +585,5 @@ class HashStore():
 		return self._upload(key, value)
 
 	def __contains__(self, item):
+		self._load_info()
 		return phash(item)+'.pickle' in self._folder_obj.files
