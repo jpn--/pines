@@ -1,6 +1,6 @@
 
 
-import pickle, base64, zlib
+import pickle, base64, zlib, hashlib
 
 
 
@@ -12,3 +12,5 @@ def inflate(squeezed):
     return pickle.loads(zlib.decompress(base64.standard_b64decode(squeezed)))
 
 
+def hash(x):
+    return hashlib.sha256(pickle.dumps(x)).hexdigest()
