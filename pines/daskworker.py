@@ -67,11 +67,14 @@ def receive_tar_package(s, packagename=None):
 	result = extract_targz_string(s, path=use_path)
 	mod = None
 	if packagename is not None:
+		logging.getLogger('distributed').critical(f"received package {packagename} attempting to import")
 		import sys, importlib
 		importlib.invalidate_caches()
 		if packagename in sys.modules:
+			logging.getLogger('distributed').critical(f"received package {packagename} already exists, reloading")
 			mod = importlib.reload(sys.modules[packagename])
 		else:
+			logging.getLogger('distributed').critical(f"received package {packagename} does not already exist, importing")
 			mod = importlib.import_module(packagename)
 	return result, mod
 
