@@ -52,6 +52,8 @@ def new_worker(scheduler=None, name=None, cfg=None, gui_loop_callback=None, reso
 	w = Worker(scheduler_location, loop=loop, name=name, resources=resources, **kwargs)
 	w.start()  # choose randomly assigned port
 
+	w.cfg = cfg
+
 	_worker_local_dir = w.local_dir
 
 	if gui_loop_callback is not None:
