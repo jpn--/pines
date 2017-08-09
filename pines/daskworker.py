@@ -124,7 +124,7 @@ def send_package_to_dask_workers(directory, scheduler_ip=None, client=None):
 	from dask.distributed import wait
 	package_name = os.path.basename( directory.rstrip("/").rstrip("\\") )
 	s = directory_to_targz_string(directory)
-	client.run(receive_tar_package, s, package_name)
+	return client.run(receive_tar_package, s, package_name)
 	# versions = client.get_versions()
 	# if 'workers' in versions:
 	# 	workers = versions['workers'].keys()
