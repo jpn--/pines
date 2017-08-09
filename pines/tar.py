@@ -1,5 +1,5 @@
 import os, io, tarfile, hashlib, json
-from .busy_dir import locked_directory
+from .busy_dir import locker
 
 def _sha512_checksum(s):
 	sha512 = hashlib.sha512()
@@ -63,7 +63,7 @@ def extract_targz_string(s, path=".", members=None, return_listdir=True, package
 	hashes = {}
 	checksum = None
 
-	with locked_directory(path):
+	with locker(path):
 
 		if package_name is not None:
 			hashes = _load_hashes(path=path)
