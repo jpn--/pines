@@ -595,7 +595,15 @@ class HashStore():
 
 	def __contains__(self, item):
 		self._load_info()
-		return phash(item)+'.pickle' in self._folder_obj.files
+		ph = phash(item)+'.pickle'
+		if isinstance(item, str):
+			i = item+'.pickle'
+		else:
+			i = '.pickle'
+		for fi in self._folder_obj.files:
+			if (ph == fi.name) or (i == fi.name):
+				return True
+		return False
 
 	def download_ph(self, ph):
 		return self._download(None, ph=ph)
