@@ -19,3 +19,10 @@ def info():
 
 
 info()
+
+
+
+## most common items here
+
+from .attribute_dict import fdict, quickdot
+from .codex import phash
