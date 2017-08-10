@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__version__ = '1.119'
+__version__ = '2.0'
 
 def info():
     import sys, os
