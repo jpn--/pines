@@ -52,17 +52,22 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=[],
 
+    install_requires=[
+        'distributed>=1.17.1',
+        'dask>=0.15',
+    ],
 
     entry_points={
-        'console_scripts': [
-            'pines_config = pines.configure:print_config',
-            'pines_cluster_worker_v = pines.daskworker:new_worker',
-        ],
+            'console_scripts': [
+                'pines_config = pines.configure:print_config',
+                'pines_cluster_worker_v = pines.daskworker:new_worker',
+                'cluster_v = pines.daskworker:new_worker_with_egnyte',
+            ],
 
-        'gui_scripts': [
-            'pines_cluster_worker = pines.daskworker:new_worker',
-        ]
+            'gui_scripts': [
+                'pines_cluster_worker = pines.daskworker:new_worker',
+                'cluster_q = pines.daskworker:new_worker_with_egnyte',
+            ]
     }
 )

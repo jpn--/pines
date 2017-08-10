@@ -1,5 +1,7 @@
 
 from . import configure
+from . import egnyte as pe
+
 import os
 import logging, logging.handlers
 
@@ -121,23 +123,34 @@ def send_package_to_dask_workers(directory, scheduler_ip=None, client=None):
 			client = Client(f"{scheduler_ip}:8786")
 		else:
 			raise TypeError("bad scheduler")
-	from dask.distributed import wait
 	package_name = os.path.basename( directory.rstrip("/").rstrip("\\") )
 	s = directory_to_targz_string(directory)
 	return client.run(receive_tar_package, s, package_name)
-	# versions = client.get_versions()
-	# if 'workers' in versions:
-	# 	workers = versions['workers'].keys()
-	# 	futures = []
-	# 	for w in workers:
-	# 		logging.getLogger('distributed').info(f"sending {package_name} to {w}")
-	# 		futures.append(client.run(receive_tar_package, s, package_name, workers=[w.strip('tcp://').split(':')[0]]) )
-	# 	wait(futures)
-	# 	return futures
-	# else:
-	# 	raise ValueError('no workers')
 
 
+
+
+def new_worker_with_egnyte():
+	cfg = configure.check_config(
+		['cluster.worker_name', 'cluster.worker_log', 'cluster.working_dir', 'cluster.scheduler',
+		 'cluster.ncores', 'egnyte.access_token'],
+		secrets=['egnyte.username', 'egnyte.password', ],
+		window_title="CLUSTER WORKER CONFIG")
+
+	if not cfg['egnyte.access_token']:
+		token = pe.get_access_token(username=cfg.egnyte.username, password=cfg.egnyte.password, return_token=True)
+		cfg['egnyte.access_token'] = token
+		configure.add('egnyte.access_token', token)
+	else:
+		pe.set_access_token(cfg['egnyte.access_token'])
+
+
+	try:
+		ncores = int(cfg.cluster.ncores)
+	except:
+		ncores = None
+
+	new_worker(cfg=cfg, gui_loop_callback=None, ncores=ncores)
 
 
 if __name__=='__main__':
