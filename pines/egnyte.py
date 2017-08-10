@@ -584,6 +584,8 @@ class HashStore():
 		ph = phash(item)
 		if ph in self._cache:
 			return self._cache[ph]
+		if isinstance(item, str) and item in self._cache:
+			return self._cache[ph]
 		x = self._download(item)
 		self._cache[ph] = x
 		return x
