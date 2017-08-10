@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
+__version__ = '1.119'
 
 def info():
     import sys, os
-    print( "┌── PINES TOOLKIT ──────────────────────────────────────────────────────────")
+    print( f"┌── PINES TOOLKIT {__version__} " + "─"*(57-len(__version__)) )
     v = '\n│'.join(sys.version.split('\n'))
     print(f"│Python {v}")
     print(f"│EXE ─ {sys.executable}")
