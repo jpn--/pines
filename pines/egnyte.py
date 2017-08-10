@@ -586,8 +586,13 @@ class HashStore():
 			return self._cache[ph]
 		if isinstance(item, str) and item in self._cache:
 			return self._cache[ph]
-		x = self._download(item)
-		self._cache[ph] = x
+		try:
+			x = self._download(item)
+		except KeyError as ke:
+			x = self._download(None, ph=item)
+			self._cache[item] = x
+		else:
+			self._cache[ph] = x
 		return x
 
 	def __setitem__(self, key, value):
