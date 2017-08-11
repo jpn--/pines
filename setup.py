@@ -56,6 +56,8 @@ setup(
     install_requires=[
         'distributed>=1.17.1',
         'dask>=0.15',
+        'egnyte>=0.5.3',
+        'pandas>=0.20.3',
     ],
 
     entry_points={
