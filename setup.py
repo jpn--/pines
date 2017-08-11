@@ -58,6 +58,10 @@ setup(
         'dask>=0.15',
         'egnyte>=0.5.3',
         'pandas>=0.20.3',
+        'dbf>=0.96.8',
+        'numpy>=1.13.1',
+        'scipy>=0.19.1',
+        'tables>=3.4.2',
     ],
 
     entry_points={
