@@ -20,3 +20,11 @@ class RateLimiter(Iterator):
                 t = time.monotonic()
             self.next_yield = t + self.interval
 
+
+_global_rate_limiters = {}
+
+def GlobalRateLimiter(tag, interval=1):
+    global _global_rate_limiters
+    if tag not in _global_rate_limiters:
+        _global_rate_limiters[tag] = RateLimiter(interval)
+    return next(_global_rate_limiters[tag])
