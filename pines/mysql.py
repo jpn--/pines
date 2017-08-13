@@ -101,7 +101,7 @@ class HashStore():
 		if cache_locally:
 			self.cur.execute("SELECT {0}, {1} FROM {2}".format(key, value, tablename))
 			for row in self.cur:
-				self.cache[row[0]] = row[1]
+				self.cache[bytes(row[0])] = row[1]
 	def __getitem__(self, key):
 		if isinstance(key, bytes) and key in self.cache:
 			return cloudpickle.loads(self.cache[key])
