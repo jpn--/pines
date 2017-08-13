@@ -24,7 +24,7 @@ class stored_dict(dict):
 				raise
 		self.cache_locally = cache_locally
 		if cache_locally:
-			self.cur.execute("SELECT {0}, {1} FROM {2}".format(key, value, name))
+			self.cur.execute("SELECT {0}, {1} FROM {2}".format(key, value, tablename))
 			for row in self.cur:
 				super().__setitem__(row[0], row[1])
 		if reverse_index:
