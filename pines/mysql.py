@@ -104,20 +104,21 @@ class HashStore():
 				self.cache[row[0]] = row[1]
 	def __getitem__(self, key):
 		if isinstance(key, bytes) and key in self.cache:
-			return self.cache[key]
+			return cloudpickle.loads(self.cache[key])
 		hkey = hash512(key)
 		if hkey in self.cache:
-			return self.cache[key]
+			return cloudpickle.loads(self.cache[key])
 		if isinstance(key, bytes):
 			self.cur.execute(f"SELECT {self.keycol}, {self.valuecol} FROM {self.name} WHERE {self.keycol}=%s", (key,))
 			for row in self.cur:
-				return row[1]
+				return cloudpickle.loads(row[1])
 		self.cur.execute(f"SELECT {self.keycol}, {self.valuecol} FROM {self.name} WHERE {self.keycol}=%s", (hkey,))
 		for row in self.cur:
-			return row[1]
+			return cloudpickle.loads(row[1])
 		raise KeyError(key)
 	def __setitem__(self, key, value):
 		hkey = hash512(key)
+		value = cloudpickle.dumps(value)
 		self.cur.execute(f"REPLACE INTO {self.name} ({self.keycol},{self.valuecol}) VALUES (%s,%s)",(hkey,value))
 		if self.cache_locally:
 			self.cache[hkey] = value
@@ -136,6 +137,7 @@ class HashStore():
 		return False
 
 	def set_by_hash(self, hashval, value):
+		value = cloudpickle.dumps(value)
 		self.cur.execute(f"REPLACE INTO {self.name} ({self.keycol},{self.valuecol}) VALUES (%s,%s)",(hashval,value))
 		if self.cache_locally:
 			self.cache[hashval] = value
