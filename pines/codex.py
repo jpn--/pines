@@ -14,3 +14,4 @@ def inflate(squeezed):
 
 def phash(x):
     return hashlib.sha256(pickle.dumps(x)).hexdigest()
+

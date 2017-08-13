@@ -1,6 +1,7 @@
 
 
 import mysql.connector
+import hashlib, cloudpickle
 
 
 
@@ -66,3 +67,82 @@ class stored_dict(dict):
 			return [i[0] for i in cur]
 		else:
 			return next(cur,[None])[0]
+
+
+
+
+def hash512(x):
+	return hashlib.sha512(cloudpickle.dumps(x)).digest()
+
+class HashStore():
+
+	def __init__(self, username, password, host, database, tablename, *, raise_on_warnings=True,
+				 autocommit=True, cache_locally=True):
+		key = "id"
+		key_format = "VARBINARY(64)"
+		value = "value"
+		value_format = "LONGBLOB"
+		self.keycol = key
+		self.valuecol = value
+		self.db = mysql.connector.connect(user=username, password=password, host=host, database=database, raise_on_warnings=raise_on_warnings)
+		self.db.connect()
+		self.name = tablename
+		self.cur = self.db.cursor()
+		self.autocommit = autocommit
+		self.cache = {}
+		try:
+			self.cur.execute(f"CREATE TABLE IF NOT EXISTS {tablename} ({key} {key_format}, {value} {value_format}, PRIMARY KEY({key}))")
+		except mysql.connector.errors.DatabaseError as err:
+			if "already exists" in str(err):
+				pass
+			else:
+				raise
+		self.cache_locally = cache_locally
+		if cache_locally:
+			self.cur.execute("SELECT {0}, {1} FROM {2}".format(key, value, tablename))
+			for row in self.cur:
+				self.cache[row[0]] = row[1]
+	def __getitem__(self, key):
+		if isinstance(key, bytes) and key in self.cache:
+			return self.cache[key]
+		hkey = hash512(key)
+		if hkey in self.cache:
+			return self.cache[key]
+		if isinstance(key, bytes):
+			self.cur.execute(f"SELECT {self.keycol}, {self.valuecol} FROM {self.name} WHERE {self.keycol}=%s", (key,))
+			for row in self.cur:
+				return row[1]
+		self.cur.execute(f"SELECT {self.keycol}, {self.valuecol} FROM {self.name} WHERE {self.keycol}=%s", (hkey,))
+		for row in self.cur:
+			return row[1]
+		raise KeyError(key)
+	def __setitem__(self, key, value):
+		hkey = hash512(key)
+		self.cur.execute(f"REPLACE INTO {self.name} ({self.keycol},{self.valuecol}) VALUES (%s,%s)",(hkey,value))
+		if self.cache_locally:
+			self.cache[hkey] = value
+		if self.autocommit:
+			self.db.commit()
+	def begin_transaction(self):
+		self.cur.execute("START TRANSACTION;")
+	def end_transaction(self):
+		self.cur.execute("COMMIT;")
+
+	def __contains__(self, item):
+		hkey = hash512(item)
+		self.cur.execute(f"SELECT 1 FROM {self.name} WHERE {self.keycol}=%s", (hkey,))
+		for row in self.cur:
+			return True
+		return False
+
+	def set_by_hash(self, hashval, value):
+		self.cur.execute(f"REPLACE INTO {self.name} ({self.keycol},{self.valuecol}) VALUES (%s,%s)",(hashval,value))
+		if self.cache_locally:
+			self.cache[hashval] = value
+		if self.autocommit:
+			self.db.commit()
+
+
+
+
+
