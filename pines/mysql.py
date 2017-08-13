@@ -76,7 +76,7 @@ def hash512(x):
 
 class HashStore():
 
-	def __init__(self, username, password, host, database, tablename, *, raise_on_warnings=True,
+	def __init__(self, username, password, host, database, tablename, *, raise_on_warnings=False,
 				 autocommit=True, cache_locally=True):
 		key = "id"
 		key_format = "VARBINARY(64)"
@@ -107,8 +107,8 @@ class HashStore():
 			return cloudpickle.loads(self.cache[key])
 		hkey = hash512(key)
 		if hkey in self.cache:
-			return cloudpickle.loads(self.cache[key])
-		if isinstance(key, bytes):
+			return cloudpickle.loads(self.cache[hkey])
+		if isinstance(key, bytes) and len(key)==64:
 			self.cur.execute(f"SELECT {self.keycol}, {self.valuecol} FROM {self.name} WHERE {self.keycol}=%s", (key,))
 			for row in self.cur:
 				return cloudpickle.loads(row[1])
