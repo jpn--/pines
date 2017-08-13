@@ -67,7 +67,7 @@ def open_persist_dict(filename, tablename='persist', **kwarg):
 
 class stored_dict_mysql(dict):
 	'''Provide a persistent storage mechanism for use with DB objects.'''
-	def __init__(self, db, name, *, reverse_index=False, key="id", value="value", value_format="LONGBLOB", overwrite_mechanism="REPLACE", autocommit=True, cache_locally=True):
+	def __init__(self, db, name, *, reverse_index=False, key="id", value="value", value_format="LONGBLOB", autocommit=True, cache_locally=True):
 		super().__init__()
 		key_format = "VARCHAR(1024)"
 		self.keycol = key
@@ -76,7 +76,6 @@ class stored_dict_mysql(dict):
 		self.db.connect()
 		self.name = name
 		self.cur = db.cursor()
-		self.overwrite_mechanism = overwrite_mechanism
 		self.autocommit = autocommit
 		self.cur.execute(f"CREATE TABLE IF NOT EXISTS {name} ({key} {key_format}, {value} {value_format}, PRIMARY KEY({key}))")
 		self.cache_locally = cache_locally
@@ -102,7 +101,7 @@ class stored_dict_mysql(dict):
 			return super().__getitem__(key)
 	def __setitem__(self, key, value):
 		if key not in self:
-			self.cur.execute("INSERT OR {} INTO {} ({},{}) VALUES (%s,%s)".format(self.overwrite_mechanism,self.name,self.keycol,self.valuecol),(key,value))
+			self.cur.execute("REPLACE INTO {} ({},{}) VALUES (%s,%s)".format(self.name,self.keycol,self.valuecol),(key,value))
 			if self.cache_locally:
 				super().__setitem__(key, value)
 		elif (key in self and self[key] != value):
