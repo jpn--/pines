@@ -18,7 +18,7 @@ class stored_dict(dict):
 		try:
 			self.cur.execute(f"CREATE TABLE IF NOT EXISTS {tablename} ({key} {key_format}, {value} {value_format}, PRIMARY KEY({key}))")
 		except mysql.connector.errors.DatabaseError as err:
-			if "already exists" in err:
+			if "already exists" in str(err):
 				pass
 			else:
 				raise
