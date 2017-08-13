@@ -67,8 +67,9 @@ def open_persist_dict(filename, tablename='persist', **kwarg):
 
 class stored_dict_mysql(dict):
 	'''Provide a persistent storage mechanism for use with DB objects.'''
-	def __init__(self, db, name, *, reverse_index=False, key="id", value="value", key_format="VARCHAR(4096)", value_format="LONGBLOB", overwrite_mechanism="REPLACE", autocommit=True, cache_locally=True):
+	def __init__(self, db, name, *, reverse_index=False, key="id", value="value", value_format="LONGBLOB", overwrite_mechanism="REPLACE", autocommit=True, cache_locally=True):
 		super().__init__()
+		key_format = "VARCHAR(1024)"
 		self.keycol = key
 		self.valuecol = value
 		self.db = db
@@ -80,7 +81,8 @@ class stored_dict_mysql(dict):
 		self.cur.execute(f"CREATE TABLE IF NOT EXISTS {name} ({key} {key_format}, {value} {value_format}, PRIMARY KEY({key}))")
 		self.cache_locally = cache_locally
 		if cache_locally:
-			for row in self.cur.execute("SELECT {0}, {1} FROM {2}".format(key,value,name)):
+			self.cur.execute("SELECT {0}, {1} FROM {2}".format(key, value, name))
+			for row in self.cur:
 				super().__setitem__(row[0], row[1])
 		if reverse_index:
 			self.reverse_index()
@@ -94,16 +96,17 @@ class stored_dict_mysql(dict):
 		try:
 			return super().__getitem__(key)
 		except KeyError:
-			for row in self.cur.execute("SELECT {0}, {1} FROM {2}".format(self.keycol,self.valuecol,self.name)):
+			self.cur.execute("SELECT {0}, {1} FROM {2} WHERE {0}=%s".format(self.keycol, self.valuecol, self.name), (key,))
+			for row in self.cur:
 				super().__setitem__(row[0], row[1])
 			return super().__getitem__(key)
 	def __setitem__(self, key, value):
 		if key not in self:
-			self.cur.execute("INSERT OR {} INTO {} ({},{}) VALUES (?,?)".format(self.overwrite_mechanism,self.name,self.keycol,self.valuecol),(key,value))
+			self.cur.execute("INSERT OR {} INTO {} ({},{}) VALUES (%s,%s)".format(self.overwrite_mechanism,self.name,self.keycol,self.valuecol),(key,value))
 			if self.cache_locally:
 				super().__setitem__(key, value)
 		elif (key in self and self[key] != value):
-			self.cur.execute("UPDATE {0} SET {2}=? WHERE {1}=?".format(self.name,self.keycol,self.valuecol),(value,key))
+			self.cur.execute("UPDATE {0} SET {2}=%s WHERE {1}=%s".format(self.name,self.keycol,self.valuecol),(value,key))
 			if self.cache_locally:
 				super().__setitem__(key, value)
 		if self.autocommit:
@@ -115,7 +118,7 @@ class stored_dict_mysql(dict):
 	def reverse_index(self):
 		self.cur.execute("CREATE INDEX IF NOT EXISTS {name}_reverse ON {name} ({val})".format(name=self.name, val=self.valuecol))
 	def reverse_lookup(self, value, all=False):
-		cur = self.cur.execute("SELECT {1} FROM {0} WHERE {2}==?".format(self.name,self.keycol,self.valuecol),(value,))
+		cur = self.cur.execute("SELECT {1} FROM {0} WHERE {2}==%s".format(self.name,self.keycol,self.valuecol),(value,))
 		if all:
 			return [i[0] for i in cur]
 		else:

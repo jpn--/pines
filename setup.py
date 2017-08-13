@@ -57,11 +57,12 @@ setup(
         'distributed>=1.17.1',
         'dask>=0.15',
         'egnyte>=0.5.3',
-        'pandas>=0.20.3',
+        'pandas>=0.20.1',
         'dbf>=0.96',
-        'numpy>=1.13.1',
-        'scipy>=0.19.1',
+        'numpy>=1.12.1',
+        'scipy>=0.19.0',
         'tables>=3.4.2',
+        # conda install mysql-connector-python
     ],
 
     entry_points={
