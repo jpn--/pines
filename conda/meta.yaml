@@ -13,7 +13,9 @@ requirements:
     - distributed >=1.17.1
     - dask >=0.15
     - pandas >=0.20.3
+    - aenum
     - dbf >=0.96
+    - egnyte >=0.5.3
     - numpy >=1.13.1
     - scipy >=0.19.1
     - pytables >=3.4.2
@@ -23,7 +25,9 @@ requirements:
     - distributed >=1.17.1
     - dask >=0.15
     - pandas >=0.20.3
+    - aenum
     - dbf >=0.96
+    - egnyte >=0.5.3
     - numpy >=1.13.1
     - scipy >=0.19.1
     - pytables >=3.4.2
