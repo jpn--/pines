@@ -8,6 +8,7 @@ import shutil
 import json
 import fnmatch
 import glob
+import sys
 
 from .logger import flogger
 from .bytesize import bytes_scaled
@@ -446,11 +447,17 @@ def pip_install_1(xdrive_python_package_file):
 	import pip
 	pip.main(['install', xdrive_python_package_file])
 
-def pip_install(package_names, xdrive_repo="X:/Share/CHI/Shared/JPN/PythonRepo/simple/"):
+def pip_install(package_names=None, xdrive_repo="X:/Share/CHI/Shared/JPN/PythonRepo/simple/"):
 	import pip
+	if package_names is None and len(sys.argv)>0 and sys.argv[0]=='pines_pip':
+		if len(sys.argv)>1 and sys.argv[1]=='install': # ignore install command, it is implied here
+			package_names = " ".join(sys.argv[2:])
+		else:
+			package_names = " ".join(sys.argv[1:])
 	for pkg in package_names.split():
-		pip.main(["install", "--upgrade", f'--index_url="file:///{xdrive_repo}"', pkg])
+		pip.main(["install", "--upgrade", f'--index-url="file:///{xdrive_repo}"', pkg])
 
 def pip_rebuild(xdrive_repo="X:/Share/CHI/Shared/JPN/PythonRepo"):
 	import libpip2pi.commands
 	libpip2pi.commands.dir2pi(argv=["dir2pi",xdrive_repo, '-S'])
+
