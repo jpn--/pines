@@ -466,7 +466,10 @@ def pip_install(package_names=None, xdrive_repo="X:/Share/CHI/Shared/JPN/PythonR
 		print("NO PACKAGES GIVEN")
 	else:
 		for pkg in pkgs:
-			pip.main(["install", "--upgrade", f'--index-url=file:///{xdrive_repo}', pkg])
+			result = pip.main(["install", "--upgrade", f'--index-url=file:///{xdrive_repo}', pkg])
+			if result!=0:
+				# failure
+				raise ModuleNotFoundError(pkg)
 
 def _pip_install_entry(args=None):
 	return pip_install()
