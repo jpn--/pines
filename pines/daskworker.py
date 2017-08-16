@@ -133,7 +133,7 @@ def send_package_to_dask_workers(directory, scheduler_ip=None, client=None):
 def new_worker_with_egnyte():
 	cfg = configure.check_config(
 		['cluster.worker_name', 'cluster.worker_log', 'cluster.working_dir', 'cluster.scheduler',
-		 'cluster.ncores', 'egnyte.access_token', 'egnyte.python_packages'],
+		 'cluster.ncores', 'egnyte.access_token', 'xdrive.python_packages'],
 		secrets=['egnyte.username', 'egnyte.password', ],
 		window_title="CLUSTER WORKER CONFIG")
 
@@ -144,13 +144,9 @@ def new_worker_with_egnyte():
 	else:
 		pe.set_access_token(cfg['egnyte.access_token'])
 
-	if cfg.egnyte.python_packages:
-		if ';' in cfg.egnyte.python_packages:
-			py_packages = cfg.egnyte.python_packages.split(";")
-		else:
-			py_packages = [cfg.egnyte.python_packages]
-		for pkg in py_packages:
-			pe.pip_install(pkg)
+	if cfg.xdrive.python_packages:
+		from .xdrive import pip_install
+		pip_install(cfg.xdrive.python_packages)
 
 	try:
 		ncores = int(cfg.cluster.ncores)
