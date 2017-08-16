@@ -14,7 +14,7 @@ def pip_install(package_names=None, private_repo="camtdm01.camsys.local"):
 		print("NO PACKAGES GIVEN")
 	else:
 		for pkg in pkgs:
-			result = pip.main(["install", "--upgrade", f'--index-url=http://{private_repo}', pkg])
+			result = pip.main(["install", "--upgrade", f'--index-url=http://{private_repo}', f'--trusted-host={private_repo}', pkg])
 			if result!=0:
 				# failure
 				raise ModuleNotFoundError(pkg)
