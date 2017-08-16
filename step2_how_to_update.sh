@@ -12,5 +12,5 @@ anaconda upload conda_builds/win-64/pines-2.24.0-*.tar.bz2
 
 cd ${HOME}
 
-conda install pines -c jpn
+conda install pines -c jpn --yes
 
