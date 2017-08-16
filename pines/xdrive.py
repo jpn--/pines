@@ -93,8 +93,13 @@ def create_subfolder(folder, subfoldername):
 	os.makedirs(f, exist_ok=True)
 	return Folder(f)
 
-def upload_file(local_file, xdrive_path):
-	basename = os.path.basename(local_file)
+def upload_file(local_file, xdrive_path, rename=None, add_suffix=None):
+	if rename is None:
+		basename = os.path.basename(local_file)
+	else:
+		basename = rename
+	if add_suffix:
+		basename = "{1}{0}{2}".format(add_suffix, *os.path.splitext(basename))
 	file_obj = File( pth(xdrive_path,basename) )
 	with open(local_file, "rb") as fp:
 		file_obj.upload(fp)
