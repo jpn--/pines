@@ -150,7 +150,7 @@ def upload_dict_json(dictionary, filename, egnyte_path, progress_callbacks=None)
 def download_file(egnyte_file, local_path, overwrite=False, mkdir=True, progress_callbacks=None):
 	if not os.path.exists(local_path) and mkdir:
 		os.makedirs(local_path)
-	bulk_download([egnyte_file], local_path, overwrite=overwrite, progress_callbacks=progress_callbacks)
+	bulk_download([egnyte_file], local_path, overwrite=overwrite, log=(progress_callbacks is not None))
 
 
 def download_file_gz(egnyte_file, local_path, overwrite=False, mkdir=True, progress_callbacks=None, retries=10, interval=1):
@@ -395,11 +395,12 @@ def _pines_bulk_download( paths, local_dir, overwrite=False, progress_callbacks=
 	progress_callbacks.finished()
 	return any_updates
 
-def bulk_download( egnyte_path, local_dir, log=True, overwrite=False ):
+def bulk_download( egnyte_path, local_dir, log=True, overwrite=False, progress_callbacks=None ):
+	p_callbacks = progress_callbacks or (ProgressCallbacks() if log else None)
 	if isinstance(egnyte_path, str):
-		return _pines_bulk_download([egnyte_path], local_dir, overwrite=overwrite, progress_callbacks=ProgressCallbacks() if log else None)
+		return _pines_bulk_download([egnyte_path], local_dir, overwrite=overwrite, progress_callbacks=p_callbacks)
 	else:
-		return _pines_bulk_download(egnyte_path, local_dir, overwrite=overwrite, progress_callbacks=ProgressCallbacks() if log else None)
+		return _pines_bulk_download(egnyte_path, local_dir, overwrite=overwrite, progress_callbacks=p_callbacks)
 
 
 
