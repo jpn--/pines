@@ -71,7 +71,8 @@ setup(
                 'pines_cluster_worker_v = pines.daskworker:new_worker',
                 'cluster_v = pines.daskworker:new_worker_with_egnyte',
                 'pines_pip_rebuild = pines.xdrive:pip_rebuild',
-                'pines_pip = pines.xdrive:pip_install'
+                'pines_pip = pines.xdrive:_pip_install_entry',
+                'pines-pip = pines.xdrive:_pip_install_entry',
             ],
 
             'gui_scripts': [

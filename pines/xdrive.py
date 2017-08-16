@@ -449,13 +449,21 @@ def pip_install_1(xdrive_python_package_file):
 
 def pip_install(package_names=None, xdrive_repo="X:/Share/CHI/Shared/JPN/PythonRepo/simple/"):
 	import pip
-	if package_names is None and len(sys.argv)>0 and sys.argv[0]=='pines_pip':
+	if package_names is None and len(sys.argv)>0 and sys.argv[0] in ('pines_pip','pines-pip'):
 		if len(sys.argv)>1 and sys.argv[1]=='install': # ignore install command, it is implied here
 			package_names = " ".join(sys.argv[2:])
 		else:
 			package_names = " ".join(sys.argv[1:])
-	for pkg in package_names.split():
-		pip.main(["install", "--upgrade", f'--index-url="file:///{xdrive_repo}"', pkg])
+	try:
+		pkgs = package_names.split()
+	except AttributeError:
+		print("NO PACKAGES GIVEN")
+	else:
+		for pkg in pkgs:
+			pip.main(["install", "--upgrade", f'--index-url="file:///{xdrive_repo}"', pkg])
+
+def _pip_install_entry(args=None):
+	return pip_install()
 
 def pip_rebuild(xdrive_repo="X:/Share/CHI/Shared/JPN/PythonRepo"):
 	import libpip2pi.commands
