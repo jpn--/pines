@@ -500,6 +500,14 @@ def set_access_token(token):
 	egnyte.configuration.save(config)
 
 
+def pip_install(egnyte_python_package_file):
+	import pip
+	from .temporary import TemporaryDirectory
+	tempdir = TemporaryDirectory()
+	download_file(egnyte_python_package_file, tempdir.name, overwrite=True, mkdir=False)
+	base_filename = os.path.basename(egnyte_python_package_file)
+	pip.main(['install', os.path.join(tempdir.name, base_filename)])
+
 
 class HashStore():
 
