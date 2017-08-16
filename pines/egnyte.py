@@ -500,13 +500,21 @@ def set_access_token(token):
 	egnyte.configuration.save(config)
 
 
-def pip_install(egnyte_python_package_file):
+def pip_install_1(egnyte_python_package_file):
 	import pip
 	from .temporary import TemporaryDirectory
 	tempdir = TemporaryDirectory()
 	download_file(egnyte_python_package_file, tempdir.name, overwrite=True, mkdir=False)
 	base_filename = os.path.basename(egnyte_python_package_file)
 	pip.main(['install', os.path.join(tempdir.name, base_filename)])
+
+def pip_install(egnyte_repo_dir, packages):
+	import pip
+	from .temporary import TemporaryDirectory
+	tempdir = TemporaryDirectory()
+	bulk_download_smart(egnyte_repo_dir, tempdir.name)
+	for pkg in packages.split():
+		pip.main(["install", "--upgrade", "--no-index", f'--find-links="{tempdir.name}"', pkg])
 
 
 class HashStore():

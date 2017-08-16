@@ -442,6 +442,14 @@ def glob_upload_gz(pattern, egnyte_path, log=True, dryrun=False):
 		if not dryrun:
 			upload_file_gz(filename, egnyte_path, progress_callbacks=ProgressCallbacks() if log else None)
 
+def pip_install_1(xdrive_python_package_file):
+	import pip
+	pip.main(['install', xdrive_python_package_file])
+
+def pip_install(package_names, xdrive_repo="X:/Share/CHI/Shared/JPN/PythonRepo"):
+	import pip
+	for pkg in package_names.split():
+		pip.main(["install", "--upgrade", f'--index_url="file:///{xdrive_repo}"', pkg])
 
 
 
