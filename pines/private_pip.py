@@ -1,5 +1,5 @@
-import pip, sys
-
+import pip, sys, os
+from distutils.dir_util import copy_tree
 
 def pip_install(package_names=None, private_repo="camtdm01.camsys.local"):
 	if package_names is None:
@@ -24,12 +24,14 @@ def _pip_install_entry(args=None):
 
 def pip_rebuild():
 	import libpip2pi.commands
-	local_repo = sys.argv[1]
+	if len(sys.argv) >= 2:
+		local_repo = sys.argv[1]
+	else:
+		local_repo = "C:\\PythonRepository"
 	if len(sys.argv) >= 3:
 		private_repo = sys.argv[2]
 	else:
 		private_repo = r"\\camtdm01\c$\Apache24\htdocs\\"
 	libpip2pi.commands.dir2pi(argv=["dir2pi",local_repo, '-S'])
-	import shutil, os
-	shutil.copytree(os.path.join(local_repo, 'simple\\'), private_repo)
+	copy_tree(os.path.join(local_repo, 'simple\\'), private_repo)
 
