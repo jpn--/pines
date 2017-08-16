@@ -474,7 +474,10 @@ def pip_install(package_names=None, xdrive_repo="X:/Share/CHI/Shared/JPN/PythonR
 def _pip_install_entry(args=None):
 	return pip_install()
 
-def pip_rebuild(xdrive_repo="X:/Share/CHI/Shared/JPN/PythonRepo"):
+
+def pip_rebuild(xdrive_repo="X:/Share/CHI/Shared/JPN/PythonRepo", private_repo=r"\\camtdm01\c$\Apache24\htdocs"):
 	import libpip2pi.commands
 	libpip2pi.commands.dir2pi(argv=["dir2pi",xdrive_repo, '-S'])
+	import shutil, os
+	shutil.copytree(os.path.join(xdrive_repo, 'simple'), private_repo)
 
