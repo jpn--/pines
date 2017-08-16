@@ -446,11 +446,11 @@ def pip_install_1(xdrive_python_package_file):
 	import pip
 	pip.main(['install', xdrive_python_package_file])
 
-def pip_install(package_names, xdrive_repo="X:/Share/CHI/Shared/JPN/PythonRepo"):
+def pip_install(package_names, xdrive_repo="X:/Share/CHI/Shared/JPN/PythonRepo/simple/"):
 	import pip
 	for pkg in package_names.split():
 		pip.main(["install", "--upgrade", f'--index_url="file:///{xdrive_repo}"', pkg])
 
 def pip_rebuild(xdrive_repo="X:/Share/CHI/Shared/JPN/PythonRepo"):
 	import libpip2pi.commands
-	libpip2pi.commands.dir2pi(argv=["dir2pi",f'"{xdrive_repo}"', '-S'])
+	libpip2pi.commands.dir2pi(argv=["dir2pi",xdrive_repo, '-S'])
