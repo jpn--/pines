@@ -70,9 +70,9 @@ setup(
                 'pines_config = pines.configure:print_config',
                 'pines_cluster_worker_v = pines.daskworker:new_worker',
                 'cluster_v = pines.daskworker:new_worker_with_egnyte',
-                'pines_pip_rebuild = pines.xdrive:pip_rebuild',
-                'pines_pip = pines.xdrive:_pip_install_entry',
-                'pines-pip = pines.xdrive:_pip_install_entry',
+                'pines_pip_rebuild = pines.private_pip:pip_rebuild',
+                'pines_pip = pines.private_pip:_pip_install_entry',
+                'pines-pip = pines.private_pip:_pip_install_entry',
             ],
 
             'gui_scripts': [
