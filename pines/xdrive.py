@@ -453,4 +453,4 @@ def pip_install(package_names, xdrive_repo="X:/Share/CHI/Shared/JPN/PythonRepo")
 
 def pip_rebuild(xdrive_repo="X:/Share/CHI/Shared/JPN/PythonRepo"):
 	import libpip2pi.commands
-	libpip2pi.commands.dir2pi(argv=["dir2pi",'"{xdrive_repo}"', '-S'])
+	libpip2pi.commands.dir2pi(argv=["dir2pi",f'"{xdrive_repo}"', '-S'])
