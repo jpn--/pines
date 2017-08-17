@@ -109,8 +109,16 @@ def next_filename(filename, format="{basename:s}.{number:03d}{extension:s}", suf
 	return fn(n + plus)
 
 
-def latest_matching(pattern, echo=False):
+def _insensitive_glob(pattern):
+	def either(c):
+		return '[%s%s]' % (c.lower(), c.upper()) if c.isalpha() else c
+	return ''.join(map(either, pattern))
+
+
+def latest_matching(pattern, echo=False, case_insensitive=False):
 	"Get the most recently modified file matching the glob pattern"
+	if case_insensitive:
+		pattern = _insensitive_glob(pattern)
 	files = glob.glob(pattern)
 	propose = None
 	propose_mtime = 0
@@ -124,8 +132,10 @@ def latest_matching(pattern, echo=False):
 	return propose
 
 
-def single_matching(pattern):
+def single_matching(pattern, case_insensitive=False):
 	"Get the only file matching a glob pattern, if 0 or 2+ matches raise NameError"
+	if case_insensitive:
+		pattern = _insensitive_glob(pattern)
 	files = glob.glob(pattern)
 	if len(files)>1:
 		raise NameError("More than one file matches pattern '{}'".format(pattern))
@@ -156,8 +166,8 @@ def get_headers(filename, delim=','):
 	The file can be gzipped, if it has a .gz extension.
 	"""
 	if filename[-3:].casefold() == '.gz':
-		with gzip.open(filename, 'rt') as file:
-			firstline= next(previewfile)
+		with gzip.open(filename, 'rt') as f:
+			firstline = f.readline()
 	else:
 		with open(filename, 'r') as f:
 			firstline = f.readline()
