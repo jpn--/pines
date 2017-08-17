@@ -46,6 +46,7 @@ class File():
 		self.path = os.path.join(ROOT, path)
 		self.is_folder = False
 	def upload(self, in_stream):
+		os.makedirs(os.path.dirname(self.path),exist_ok=True)
 		with open(self.path, mode='wb') as f:
 			shutil.copyfileobj(in_stream, f)
 	def download(self, out_stream):
