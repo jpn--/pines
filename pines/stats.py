@@ -41,3 +41,9 @@ def beta_pert( x_min, x_mode, x_max,  lamb= 4 ):
 	return scipy.stats.beta( v, w, loc=x_min, scale=x_range )
 
 
+def triangular( x_min, x_mode, x_max ):
+	if ( x_min > x_max or x_mode > x_max or x_mode < x_min ):
+		raise ValueError( "invalid parameters" )
+	scale = x_max - x_min
+	peak = (x_mode-x_min)/scale
+	return scipy.stats.triang( peak, loc=x_min, scale=scale )
