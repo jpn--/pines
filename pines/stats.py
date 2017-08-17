@@ -47,3 +47,10 @@ def triangular( x_min, x_mode, x_max ):
 	scale = x_max - x_min
 	peak = (x_mode-x_min)/scale
 	return scipy.stats.triang( peak, loc=x_min, scale=scale )
+
+
+def uniform( x_min, x_max ):
+	if ( x_min > x_max ):
+		raise ValueError( "invalid parameters" )
+	scale = x_max - x_min
+	return scipy.stats.uniform( loc=x_min, scale=scale )
