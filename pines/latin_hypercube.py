@@ -54,7 +54,7 @@ def induce_correlation(h, corr, rows=None, inplace=False):
 		return (a[upper].mean() + a[lower].mean())/2
 	def _calc_corr(m):
 		nonlocal h1
-		j = (1-m)/nfact
+		j = (1-m)/(nfact-1)
 		for i in range(nfact):
 			h1[i,:] = h[i]*m + (h[:i].sum(0)+h[i+1:].sum(0))*j
 		return _avg_off_diag(numpy.corrcoef(h1))
@@ -68,3 +68,35 @@ def induce_correlation(h, corr, rows=None, inplace=False):
 	else:
 		return h1
 
+
+def induce_correlation_compute_params(n_factors, n_draws, corr):
+	h = lhs(n_factors, n_draws)
+	mm, j = 0, 0
+	h1 = numpy.zeros_like(h)
+	nfact = h.shape[0]
+
+	def _avg_off_diag(a):
+		upper = numpy.triu_indices(a.shape[0], 1)
+		lower = numpy.tril_indices(a.shape[0], -1)
+		return (a[upper].mean() + a[lower].mean()) / 2
+
+	def _calc_corr(m):
+		nonlocal h1, j, mm
+		mm = m
+		j = (1 - m) / (nfact - 1)
+		for i in range(nfact):
+			h1[i, :] = h[i] * m + (h[:i].sum(0) + h[i + 1:].sum(0)) * j
+		return _avg_off_diag(numpy.corrcoef(h1))
+
+	_target_corr = lambda j: (_calc_corr(j) - corr) ** 2
+	result = minimize_scalar(_target_corr, bounds=(0, 1), method='Bounded')
+	return mm, j
+
+
+def induce_correlation_apply_params(h, m, j):
+	h = numpy.asarray(h)
+	h1 = numpy.array(h, copy=True)
+	nfact = h1.shape[0]
+	for i in range(nfact):
+		h1[i] = h[i] * m + (h[:i].sum(0) + h[i + 1:].sum(0)) * j
+	return h1
