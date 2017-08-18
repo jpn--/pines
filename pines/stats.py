@@ -55,6 +55,27 @@ def uniform( x_min, x_max ):
 	scale = x_max - x_min
 	return scipy.stats.uniform( loc=x_min, scale=scale )
 
+def _mod_linspace(start, stop, num=50, dtype=None):
+	y, step = numpy.linspace(start, stop, num=num, endpoint=False, retstep=True, dtype=dtype)
+	y += step/2
+	return y
+
+def prod_two_dists_ppf_approx(dist1, dist2, q, draws=500):
+	x = _mod_linspace(0,1,draws)
+	x1 = dist1.ppf(x)
+	x2 = dist2.ppf(x)
+	x1x2 = numpy.outer(x1,x2).flatten()
+	return numpy.percentile(x1x2,q*100)
+
+def sum_two_dists_ppf_approx(dist1, dist2, q, draws=500):
+	x = _mod_linspace(0,1,draws)
+	x1 = dist1.ppf(x)
+	x2 = dist2.ppf(x)
+	x1x2 = numpy.zeros([draws,draws])
+	x1x2 += x1[:,None]
+	x1x2 += x2[None,:]
+	return numpy.percentile(x1x2,q*100)
+
 
 def prod_two_triangular_ppf_approx(q, x1_min, x1_mode, x1_max, x2_min, x2_mode, x2_max):
 	x = numpy.linspace(0,1,500)
