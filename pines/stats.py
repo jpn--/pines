@@ -54,3 +54,11 @@ def uniform( x_min, x_max ):
 		raise ValueError( "invalid parameters" )
 	scale = x_max - x_min
 	return scipy.stats.uniform( loc=x_min, scale=scale )
+
+
+def prod_two_triangular_ppf_approx(q, x1_min, x1_mode, x1_max, x2_min, x2_mode, x2_max):
+	x = numpy.linspace(0,1,500)
+	x1 = triangular( x1_min, x1_mode, x1_max ).ppf(x)
+	x2 = triangular( x2_min, x2_mode, x2_max ).ppf(x)
+	x1x2 = numpy.outer(x1,x2).flatten()
+	return numpy.percentile(x1x2,q*100)
