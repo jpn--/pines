@@ -1,5 +1,7 @@
 
 import numpy
+from scipy.optimize import minimize_scalar
+
 
 def lhs( n_factors, n_samples, genepool=10000, random_in_cell=True ):
 	"""
@@ -38,3 +40,31 @@ def lhs( n_factors, n_samples, genepool=10000, random_in_cell=True ):
 		lhs += 0.5
 	lhs /= n_samples
 	return lhs
+
+
+def induce_correlation(h, corr, rows=None, inplace=False):
+	h_full = h
+	if rows:
+		h = h[rows,:]
+	h1 = numpy.zeros_like(h)
+	nfact = h.shape[0]
+	def _avg_off_diag(a):
+		upper = numpy.triu_indices(a.shape[0], 1)
+		lower = numpy.tril_indices(a.shape[0], -1)
+		return (a[upper].mean() + a[lower].mean())/2
+	def _calc_corr(m):
+		nonlocal h1
+		j = (1-m)/nfact
+		for i in range(nfact):
+			h1[i,:] = h[i]*m + (h[:i].sum(0)+h[i+1:].sum(0))*j
+		return _avg_off_diag(numpy.corrcoef(h1))
+	_target_corr = lambda j: (_calc_corr(j)-corr)**2
+	result = minimize_scalar(_target_corr, bounds=(0,1), method='Bounded')
+	if inplace:
+		if rows:
+			h_full[rows,:] = h1[:]
+		else:
+			h[:] = h1[:]
+	else:
+		return h1
+
