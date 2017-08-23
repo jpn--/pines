@@ -27,6 +27,13 @@ def load(filename=None):
         pass
     return quickdot()
 
+_cached_values = None
+
+def cached(filename=None):
+    global _cached_values
+    if _cached_values is None:
+        _cached_values = load(filename)
+    return _cached_values
 
 def save(config, filename=None):
     """
