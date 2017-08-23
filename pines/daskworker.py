@@ -133,7 +133,7 @@ def send_package_to_dask_workers(directory, scheduler_ip=None, client=None):
 def new_worker_with_egnyte():
 	cfg = configure.check_config(
 		['cluster.worker_name', 'cluster.worker_log', 'cluster.working_dir', 'cluster.scheduler',
-		 'cluster.ncores', 'egnyte.access_token', 'private_pip.python_packages'],
+		 'cluster.ncores', 'cluster.ratelimit', 'egnyte.access_token', 'private_pip.python_packages'],
 		secrets=['egnyte.username', 'egnyte.password', ],
 		window_title="CLUSTER WORKER CONFIG")
 
