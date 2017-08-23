@@ -20,8 +20,8 @@ def new_worker(scheduler=None, name=None, cfg=None, gui_loop_callback=None, reso
 		handler = logging.handlers.RotatingFileHandler(cfg.cluster['worker_log'], 'a', 10000, 10)
 		formatter = logging.Formatter(fmt=_mess_format, datefmt=_time_format)
 		handler.setFormatter(formatter)
-		logging.getLogger('distributed').addHandler(handler)
-		logging.getLogger('distributed').setLevel(logging.DEBUG)
+		logging.getLogger().addHandler(handler)
+		logging.getLogger().setLevel(logging.INFO)
 		logging.getLogger('distributed').info(f"opening log for {name}")
 
 	if scheduler is None:
