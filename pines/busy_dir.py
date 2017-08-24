@@ -20,7 +20,7 @@ def locked_directory(dirname, retry_after=5, timeout=600, busy_flag="__BUSY__"):
 		raise BlockingIOError(f'directory {dirname} is locked')
 
 	# ready to lock
-	flog.info(f"locking {dirname}")
+	flog.info(f"locking {dirname} by file")
 	with open(busy_file, 'w') as f1:
 		f1.write('busy')
 
@@ -29,7 +29,7 @@ def locked_directory(dirname, retry_after=5, timeout=600, busy_flag="__BUSY__"):
 	except:
 		raise
 	finally:
-		flog.info(f"releasing {dirname}")
+		flog.info(f"releasing {dirname} by file")
 		os.remove(busy_file)
 
 
@@ -83,9 +83,9 @@ def locker(name, retry_after=15, timeout=300):
 
 	try:
 		# do something...
-		flog.info(f"locking {name}")
+		flog.info(f"locking {name} by mutex")
 		yield name
 	finally:
-		flog.info(f"releasing {name}")
+		flog.info(f"releasing {name} by mutex")
 		_lockers[name].release()
 
