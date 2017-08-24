@@ -159,6 +159,7 @@ class HashStore():
 	def set_by_hash(self, hashval, value):
 		try:
 			value = cloudpickle.dumps(value)
+			self.db.reconnect(attempts=30, delay=5)
 			cur = self.db.cursor()
 			cur.execute(f"REPLACE INTO {self.name} ({self.keycol},{self.valuecol}) VALUES (%s,%s)",(hashval,value))
 			if self.cache_locally:
