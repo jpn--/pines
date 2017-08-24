@@ -17,7 +17,7 @@ def new_worker(scheduler=None, name=None, cfg=None, gui_loop_callback=None, reso
 	if cfg is None:
 		cfg = configure.check_config(['cluster.worker_log', 'cluster.scheduler'], window_title="PINES CLUSTER WORKER CONFIG")
 	if 'worker_log' in cfg.cluster:
-		handler = logging.handlers.RotatingFileHandler(cfg.cluster['worker_log'], 'a', 10000, 10)
+		handler = logging.handlers.RotatingFileHandler(cfg.cluster['worker_log'], 'a', 1000000, 10)
 		formatter = logging.Formatter(fmt=_mess_format, datefmt=_time_format)
 		handler.setFormatter(formatter)
 		logging.getLogger().addHandler(handler)
