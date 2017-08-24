@@ -77,21 +77,23 @@ def hash512(x):
 class HashStore():
 
 	def __init__(self, username, password, host, database, tablename, *, raise_on_warnings=False,
-				 autocommit=True, cache_locally=True):
+				 autocommit=True, cache_locally=True, keep_connection_alive=True):
 		key = "id"
 		key_format = "VARBINARY(64)"
 		value = "value"
 		value_format = "LONGBLOB"
 		self.keycol = key
 		self.valuecol = value
-		self.db = mysql.connector.connect(user=username, password=password, host=host, database=database, raise_on_warnings=raise_on_warnings)
+		self.keep_connection_alive = keep_connection_alive
+		self.db = mysql.connector.connect(user=username, password=password, host=host, database=database,
+		                                  raise_on_warnings=raise_on_warnings)
 		self.db.connect()
+		cur = self.db.cursor()
 		self.name = tablename
-		self.cur = self.db.cursor()
 		self.autocommit = autocommit
 		self.cache = {}
 		try:
-			self.cur.execute(f"CREATE TABLE IF NOT EXISTS {tablename} ({key} {key_format}, {value} {value_format}, PRIMARY KEY({key}))")
+			cur.execute(f"CREATE TABLE IF NOT EXISTS {tablename} ({key} {key_format}, {value} {value_format}, PRIMARY KEY({key}))")
 		except mysql.connector.errors.DatabaseError as err:
 			if "already exists" in str(err):
 				pass
@@ -99,50 +101,73 @@ class HashStore():
 				raise
 		self.cache_locally = cache_locally
 		if cache_locally:
-			self.cur.execute("SELECT {0}, {1} FROM {2}".format(key, value, tablename))
-			for row in self.cur:
+			cur.execute("SELECT {0}, {1} FROM {2}".format(key, value, tablename))
+			for row in cur:
 				self.cache[bytes(row[0])] = row[1]
+		if not self.keep_connection_alive:
+			self.db.disconnect()
+
 	def __getitem__(self, key):
-		if isinstance(key, bytes) and key in self.cache:
-			return cloudpickle.loads(self.cache[key])
-		hkey = hash512(key)
-		if hkey in self.cache:
-			return cloudpickle.loads(self.cache[hkey])
-		if isinstance(key, bytes) and len(key)==64:
-			self.cur.execute(f"SELECT {self.keycol}, {self.valuecol} FROM {self.name} WHERE {self.keycol}=%s", (key,))
-			for row in self.cur:
+		try:
+			if isinstance(key, bytes) and key in self.cache:
+				return cloudpickle.loads(self.cache[key])
+			hkey = hash512(key)
+			if hkey in self.cache:
+				return cloudpickle.loads(self.cache[hkey])
+			self.db.reconnect(attempts=30,delay=5)
+			cur = self.db.cursor()
+			if isinstance(key, bytes) and len(key)==64:
+				cur.execute(f"SELECT {self.keycol}, {self.valuecol} FROM {self.name} WHERE {self.keycol}=%s", (key,))
+				for row in cur:
+					return cloudpickle.loads(row[1])
+			cur.execute(f"SELECT {self.keycol}, {self.valuecol} FROM {self.name} WHERE {self.keycol}=%s", (hkey,))
+			for row in cur:
 				return cloudpickle.loads(row[1])
-		self.cur.execute(f"SELECT {self.keycol}, {self.valuecol} FROM {self.name} WHERE {self.keycol}=%s", (hkey,))
-		for row in self.cur:
-			return cloudpickle.loads(row[1])
-		raise KeyError(key)
+			raise KeyError(key)
+		finally:
+			if not self.keep_connection_alive:
+				self.db.disconnect()
+
 	def __setitem__(self, key, value):
-		hkey = hash512(key)
-		value = cloudpickle.dumps(value)
-		self.cur.execute(f"REPLACE INTO {self.name} ({self.keycol},{self.valuecol}) VALUES (%s,%s)",(hkey,value))
-		if self.cache_locally:
-			self.cache[hkey] = value
-		if self.autocommit:
-			self.db.commit()
-	def begin_transaction(self):
-		self.cur.execute("START TRANSACTION;")
-	def end_transaction(self):
-		self.cur.execute("COMMIT;")
+		try:
+			hkey = hash512(key)
+			value = cloudpickle.dumps(value)
+			self.db.reconnect(attempts=30, delay=5)
+			cur = self.db.cursor()
+			cur.execute(f"REPLACE INTO {self.name} ({self.keycol},{self.valuecol}) VALUES (%s,%s)",(hkey,value))
+			if self.cache_locally:
+				self.cache[hkey] = value
+			if self.autocommit:
+				self.db.commit()
+		finally:
+			if not self.keep_connection_alive:
+				self.db.disconnect()
 
 	def __contains__(self, item):
-		hkey = hash512(item)
-		self.cur.execute(f"SELECT 1 FROM {self.name} WHERE {self.keycol}=%s", (hkey,))
-		for row in self.cur:
-			return True
-		return False
+		try:
+			hkey = hash512(item)
+			self.db.reconnect(attempts=30, delay=5)
+			cur = self.db.cursor()
+			cur.execute(f"SELECT 1 FROM {self.name} WHERE {self.keycol}=%s", (hkey,))
+			for row in cur:
+				return True
+			return False
+		finally:
+			if not self.keep_connection_alive:
+				self.db.disconnect()
 
 	def set_by_hash(self, hashval, value):
-		value = cloudpickle.dumps(value)
-		self.cur.execute(f"REPLACE INTO {self.name} ({self.keycol},{self.valuecol}) VALUES (%s,%s)",(hashval,value))
-		if self.cache_locally:
-			self.cache[hashval] = value
-		if self.autocommit:
-			self.db.commit()
+		try:
+			value = cloudpickle.dumps(value)
+			cur = self.db.cursor()
+			cur.execute(f"REPLACE INTO {self.name} ({self.keycol},{self.valuecol}) VALUES (%s,%s)",(hashval,value))
+			if self.cache_locally:
+				self.cache[hashval] = value
+			if self.autocommit:
+				self.db.commit()
+		finally:
+			if not self.keep_connection_alive:
+				self.db.disconnect()
 
 
 
