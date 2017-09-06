@@ -7,7 +7,7 @@ import json
 import pandas
 import os
 from .logger import flogger
-from dask.distributed import Client, Future
+from dask.distributed import Client as _Client, Future
 from .timesize import timesize
 from .counter import Counter
 
@@ -19,57 +19,45 @@ from .hardware_info import node, processor_name
 _computer = node()
 _processor = processor_name()
 
+class Client(_Client):
 
-_client = None
-_futures_bank = []
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self._futures_bank = []
 
-def connect_scheduler(scheduler_address):
-	global _client
-	if _client is not None:
-		raise ValueError('dask.distributed client exists')
-	if ":" not in scheduler_address:
-		scheduler_address += ":8786"
-	_client = Client(scheduler_address)
+	def submit(self, *args, **kwargs):
+		i = super().submit(*args, **kwargs)
+		self._futures_bank.append(i)
+		return i
 
-def submit(*arg, **kwarg):
-	global _client
-	if _client is None:
-		raise ValueError('dask.distributed client not connected')
-	i = _client.submit(*arg, **kwarg)
-	_futures_bank.append(i)
-	return i
+	def task_status(self):
+		count = Counter()
+		for f in self._futures_bank:
+			if isinstance(f,Future):
+				kind = f.key.rsplit('-',1)[0]
+				count.one(f'{kind}.{f.status}')
+			else:
+				count.one('?')
+		return count
 
-def task_status():
-	count = Counter()
-	for f in _futures_bank:
-		if isinstance(f,Future):
-			kind = f.key.rsplit('-',1)[0]
-			count.one(f'{kind}.{f.status}')
-		else:
-			count.one('?')
-	return count
-
-def worker_status():
-	global _client
-	if _client is None:
-		raise ValueError('dask.distributed client not connected')
-	worker_info = _client.scheduler_info()['workers']
-	now = time.time()
-	worker_data = [(
-		ip,
-		i['name'],
-		i['ncores'],
-		i['executing'],
-		i['ready'],
-		i['in_memory'],
-		timesize(now-i['last-seen'])+" ago",
-		timesize(now-i['last-task'])+" ago",
-	) for ip,i in worker_info.items()]
-	result = pandas.DataFrame(
-		columns=['address','name','ncores','executing','ready','in-memory','last-seen','last-task'],
-		data=worker_data
-	)
-	return result
+	def worker_status(self):
+		worker_info = self.scheduler_info()['workers']
+		now = time.time()
+		worker_data = [(
+			ip,
+			i['name'],
+			i['ncores'],
+			i['executing'],
+			i['ready'],
+			i['in_memory'],
+			timesize(now-i['last-seen'])+" ago",
+			timesize(now-i['last-task'])+" ago",
+		) for ip,i in worker_info.items()]
+		result = pandas.DataFrame(
+			columns=['address','name','ncores','executing','ready','in-memory','last-seen','last-task'],
+			data=worker_data
+		)
+		return result
 
 
 
