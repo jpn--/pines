@@ -30,7 +30,7 @@ def new_worker(scheduler=None, name=None, cfg=None, gui_loop_callback=None, reso
 	if scheduler is None: # still...
 		raise ValueError('no scheduler known, set one in pines.configure .cluster')
 
-	from distributed import Worker
+	from distributed import Worker, Nanny
 	from tornado.ioloop import IOLoop
 	from threading import Thread
 
@@ -51,7 +51,7 @@ def new_worker(scheduler=None, name=None, cfg=None, gui_loop_callback=None, reso
 	if resources:
 		logging.getLogger('distributed').info(f"worker {name} has resources {str(resources)}")
 
-	w = Worker(scheduler_location, loop=loop, name=name, resources=resources, **kwargs)
+	w = Nanny(scheduler_location, loop=loop, name=name, resources=resources, **kwargs)
 	w.start()  # choose randomly assigned port
 
 	w.cfg = cfg
