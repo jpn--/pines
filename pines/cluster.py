@@ -59,6 +59,21 @@ class Client(_Client):
 		)
 		return result
 
+	def retire_workers(self, workers_to_retire):
+		"""
+		Cleanly retire a worker, moving saved results to other workers first.
+		
+		Parameters
+		----------
+		workers_to_retire
+
+		Returns
+		-------
+
+		"""
+		def retirements(w, dask_scheduler=None):
+			dask_scheduler.retire_workers(workers=w)
+		self.run_on_scheduler(retirements, workers_to_retire)
 
 
 # OLD CLUSTER ...
