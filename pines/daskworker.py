@@ -1,6 +1,7 @@
 
 from . import configure
 from . import egnyte as pe
+from distributed import Worker, Nanny as _Nanny
 
 import os
 import logging, logging.handlers
@@ -10,6 +11,12 @@ _mess_format = '%(asctime)15s %(name)s %(levelname)s %(message)s'
 
 
 _worker_local_dir = None
+
+
+class Nanny(_Nanny):
+	def change_ncores(self, ncores):
+		self.ncores = ncores
+
 
 
 def new_worker(scheduler=None, name=None, cfg=None, gui_loop_callback=None, resources=None, **kwargs):
@@ -30,7 +37,6 @@ def new_worker(scheduler=None, name=None, cfg=None, gui_loop_callback=None, reso
 	if scheduler is None: # still...
 		raise ValueError('no scheduler known, set one in pines.configure .cluster')
 
-	from distributed import Worker, Nanny
 	from tornado.ioloop import IOLoop
 	from threading import Thread
 
