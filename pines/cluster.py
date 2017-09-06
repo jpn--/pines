@@ -77,9 +77,24 @@ class Client(_Client):
 
 	def change_resources(self, worker, new_resources=None):
 
-		def delta_resource(w, r, dask_scheduler=None):
+		def delta_resource(worker_, resources, dask_scheduler=None):
 			dask_scheduler.remove_resources(w)
 			dask_scheduler.add_resources(stream=None, worker=w, resources=r )
+
+			# remove_resources(self, worker):
+			if worker_ in dask_scheduler.worker_resources:
+				del dask_scheduler.used_resources[worker_]
+				for resource, quantity in dask_scheduler.worker_resources.pop(worker_).items():
+					del dask_scheduler.resources[resource][worker_]
+
+			# add_resources(self, stream=None, worker=None, resources=None):
+			if worker_ not in dask_scheduler.worker_resources:
+				dask_scheduler.worker_resources[worker_] = resources.copy()
+				dask_scheduler.used_resources[worker_] = resources.copy()
+				for resource, quantity in resources.items():
+					dask_scheduler.used_resources[worker_][resource] = 0
+					dask_scheduler.resources[resource][worker_] = quantity
+
 
 		new_resources = new_resources or {}
 		self.run_on_scheduler(delta_resource, worker, new_resources)
