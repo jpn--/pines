@@ -45,13 +45,13 @@ class Client(_Client):
 		now = time.time()
 		worker_data = [(
 			ip,
-			i['name'],
-			i['ncores'],
-			i['executing'],
-			i['ready'],
-			i['in_memory'],
-			timesize(now-i['last-seen'])+" ago",
-			timesize(now-i['last-task'])+" ago",
+			i['name'] if 'name' in i else "n/a",
+			i['ncores'] if 'ncores' in i else -999,
+			i['executing'] if 'executing' in i else -999,
+			i['ready'] if 'ready' in i else -999,
+			i['in_memory'] if 'in_memory' in i else -999,
+			timesize(now-i['last-seen'])+" ago" if 'last-seen' in i else "n/a",
+			timesize(now-i['last-task'])+" ago" if 'last-task' in i else "n/a",
 		) for ip,i in worker_info.items()]
 		result = pandas.DataFrame(
 			columns=['address','name','ncores','executing','ready','in-memory','last-seen','last-task'],
@@ -62,7 +62,7 @@ class Client(_Client):
 	def retire_workers(self, workers_to_retire):
 		"""
 		Cleanly retire a worker, moving saved results to other workers first.
-		
+
 		Parameters
 		----------
 		workers_to_retire
@@ -74,6 +74,15 @@ class Client(_Client):
 		def retirements(w, dask_scheduler=None):
 			dask_scheduler.retire_workers(workers=w)
 		self.run_on_scheduler(retirements, workers_to_retire)
+
+	def change_resources(self, worker, new_resources=None):
+
+		def delta_resource(w, r, dask_scheduler=None):
+			dask_scheduler.remove_resources(w)
+			dask_scheduler.add_resources(stream=None, worker=w, resources=r )
+
+		new_resources = new_resources or {}
+		self.run_on_scheduler(delta_resource, worker, new_resources)
 
 
 # OLD CLUSTER ...
