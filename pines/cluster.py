@@ -8,6 +8,8 @@ import pandas
 import os
 from .logger import flogger
 from dask.distributed import Client as _Client, Future
+from distributed.core import rpc as _rpc
+
 from .timesize import timesize
 from .counter import Counter
 
@@ -24,6 +26,7 @@ class Client(_Client):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		self._futures_bank = []
+		self.suspended_nannies = set()
 
 	def submit(self, *args, **kwargs):
 		i = super().submit(*args, **kwargs)
@@ -75,6 +78,33 @@ class Client(_Client):
 			dask_scheduler.retire_workers(workers=w)
 		self.run_on_scheduler(retirements, workers_to_retire)
 
+	def change_worker_ncores(self, worker, new_ncores):
+		"""
+		Change the ncores on a worker.
+
+		The worker must have a nanny.  Using this function will restart the worker.
+
+		Parameters
+		----------
+		worker : str
+			address of the worker to modify
+		new_ncores : int
+			new ncores to relaunch the worker with
+
+		Returns
+		-------
+
+		"""
+		def delta_ncores(worker_, ncores_, dask_scheduler=None):
+			nanny_addr = dask_scheduler.get_worker_service_addr(worker_, 'nanny')
+			if nanny_addr is None:
+				raise ValueError(f'worker {worker_} must have a nanny to use change_worker_ncores')
+			nanny = _rpc(nanny_addr)
+			nanny.change_ncores(new_ncores=ncores_)
+			nanny.restart(close=True)
+			nanny.close_rpc()
+		return self.run_on_scheduler(delta_ncores, worker, new_ncores)
+
 	def change_resources(self, worker, new_resources=None):
 
 		def delta_resource(worker_, resources, dask_scheduler=None):
@@ -95,6 +125,43 @@ class Client(_Client):
 		new_resources = new_resources or {}
 		self.run_on_scheduler(delta_resource, worker, new_resources)
 
+	def get_worker_address_by_name(self, name):
+		worker_info = self.scheduler_info()['workers']
+		for addr, i in worker_info.items():
+			if 'name' in i:
+				if i['name']==name:
+					return addr
+
+	def suspend_workers(self, workers):
+		### run this on the scheduler
+		def _prepare_workers_for_disconnect(workers, dask_scheduler=None):
+			workers = set(workers)
+			if len(workers) > 0:
+				keys = set.union(*[dask_scheduler.has_what[w] for w in workers])
+				keys = {k for k in keys if dask_scheduler.who_has[k].issubset(workers)}
+			else:
+				keys = set()
+
+			other_workers = set(dask_scheduler.worker_info) - workers
+			if keys:
+				if other_workers:
+					yield dask_scheduler.replicate(keys=keys, workers=other_workers, n=1, delete=False)
+			# get nanny addresses
+			nannie_addresses = {addr: dask_scheduler.get_worker_service_addr(addr, 'nanny')
+								for addr in workers}
+
+			nannies = [_rpc(nanny_address)
+						for nanny_address in nannie_addresses.values()
+						if nanny_address is not None]
+			# kill worker
+			try:
+				[nanny.restart(close=True) for nanny in nannies]
+			finally:
+				for nanny in nannies:
+					nanny.close_rpc()
+			# return nanny address
+			return [nanny_address for nanny_address in nannie_addresses.values()]
+		self.suspended_nannies += set( self.run_on_scheduler(_prepare_workers_for_disconnect, workers) )
 
 # OLD CLUSTER ...
 #

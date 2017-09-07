@@ -1,4 +1,3 @@
-
 from . import configure
 from . import egnyte as pe
 from distributed import Worker, Nanny as _Nanny
@@ -9,20 +8,28 @@ import logging, logging.handlers
 _time_format = '%b %d %H:%M:%S'
 _mess_format = '%(asctime)15s %(name)s %(levelname)s %(message)s'
 
-
 _worker_local_dir = None
 
 
 class Nanny(_Nanny):
-	def change_ncores(self, ncores):
-		self.ncores = ncores
+	def change_ncores(self, *arg, **kwarg):
+		new_ncores = kwarg.pop('new_ncores')
+		logging.getLogger('distributed').info(f"changing ncores to {new_ncores}")
+		if new_ncores is not None:
+			self.ncores = new_ncores
+			if self.process:
+				self.process.worker_kwargs['ncores'] = new_ncores
 
+	def __init__(self, *arg, **kwarg):
+		super().__init__(*arg, **kwarg)
+		self.handlers['change_ncores'] = self.change_ncores
 
 
 def new_worker(scheduler=None, name=None, cfg=None, gui_loop_callback=None, resources=None, **kwargs):
 	global _worker_local_dir
 	if cfg is None:
-		cfg = configure.check_config(['cluster.worker_log', 'cluster.scheduler'], window_title="PINES CLUSTER WORKER CONFIG")
+		cfg = configure.check_config(['cluster.worker_log', 'cluster.scheduler'],
+		                             window_title="PINES CLUSTER WORKER CONFIG")
 	if 'worker_log' in cfg.cluster:
 		handler = logging.handlers.RotatingFileHandler(cfg.cluster['worker_log'], 'a', 1000000, 10)
 		formatter = logging.Formatter(fmt=_mess_format, datefmt=_time_format)
@@ -34,7 +41,7 @@ def new_worker(scheduler=None, name=None, cfg=None, gui_loop_callback=None, reso
 	if scheduler is None:
 		scheduler = cfg.cluster['scheduler']
 
-	if scheduler is None: # still...
+	if scheduler is None:  # still...
 		raise ValueError('no scheduler known, set one in pines.configure .cluster')
 
 	from tornado.ioloop import IOLoop
@@ -72,7 +79,6 @@ def new_worker(scheduler=None, name=None, cfg=None, gui_loop_callback=None, reso
 	logging.getLogger('distributed').critical(f"ending worker {name} for {scheduler_location}")
 
 
-
 def receive_tar_package(s, packagename=None):
 	global _worker_local_dir
 	from .tar import extract_targz_string
@@ -85,12 +91,13 @@ def receive_tar_package(s, packagename=None):
 		importlib.invalidate_caches()
 		import importlib.util
 		spec = importlib.util.find_spec(packagename)
-		print("spec",spec)
+		print("spec", spec)
 		if packagename in sys.modules:
 			logging.getLogger('distributed').critical(f"received package {packagename} already exists, reloading")
 			mod = importlib.reload(sys.modules[packagename])
 		else:
-			logging.getLogger('distributed').critical(f"received package {packagename} does not already exist, importing")
+			logging.getLogger('distributed').critical(
+				f"received package {packagename} does not already exist, importing")
 			try:
 				mod = importlib.import_module(packagename)
 			except ModuleNotFoundError:
@@ -129,11 +136,9 @@ def send_package_to_dask_workers(directory, scheduler_ip=None, client=None):
 			client = Client(f"{scheduler_ip}:8786")
 		else:
 			raise TypeError("bad scheduler")
-	package_name = os.path.basename( directory.rstrip("/").rstrip("\\") )
+	package_name = os.path.basename(directory.rstrip("/").rstrip("\\"))
 	s = directory_to_targz_string(directory)
 	return client.run(receive_tar_package, s, package_name)
-
-
 
 
 def new_worker_with_egnyte():
@@ -162,7 +167,7 @@ def new_worker_with_egnyte():
 	new_worker(cfg=cfg, gui_loop_callback=None, ncores=ncores)
 
 
-if __name__=='__main__':
-	w=new_worker()
+if __name__ == '__main__':
+	w = new_worker()
 
-	
+
