@@ -21,7 +21,7 @@ def info():
 
 class Info:
 
-    def __init__(self, appname='Pines'):
+    def __init__(self, appname='Pines Toolkit'):
         self.appname = appname
 
     def __repr__(self):
@@ -29,7 +29,7 @@ class Info:
         v = '\n│'.join(sys.version.split('\n'))
         r += (f"\n│Python {v}")
         r += (f"\n│EXE ─ {sys.executable}")
-        r += (f"\n│CWD ─ {os.getcwd()}", )
+        r += (f"\n│CWD ─ {os.getcwd()}" )
         for p in sys.path[:1]:
             r += (f"\n│PTH ┬ {p}")
         for p in sys.path[1:-1]:
@@ -54,7 +54,19 @@ class Info:
         xsign << p
         xsign << Elem('img', {'src': "https://www.camsys.com/sites/default/files/camsys_logo.png",
                               'style': 'float:right;max-height:48px;margin-top:0'})
-        return xsign
+
+        v = '\n│'.join(sys.version.split('\n'))
+        xsign << Elem('br')
+        xinfo = Elem('div', {'class': 'larch_head_tag_more', 'style':'margin-top:10px; padding:7px'}, text=f'Python {v}')
+        xsign << xinfo
+        xinfo << Elem('br', tail=f"EXE - {sys.executable}")
+        xinfo << Elem('br', tail=f"CWD - {os.getcwd()}")
+        xinfo << Elem('br', tail=f"PATH - ")
+        ul = Elem('ul', {'style': 'margin-top:0; margin-bottom:0;'})
+        xinfo << ul
+        for p in sys.path:
+            ul << Elem('li', text=p)
+        return xsign.tostring().decode()
 
 
 
@@ -93,24 +105,25 @@ def ipython_status(magic_matplotlib=True):
 
 
 
+_i = Info()
 
-if 'larch' not in sys.modules and 'larch4' not in sys.modules:
-    if 'IPython' in ipython_status():
-        from IPython.display import display
-        try:
-            display(Info())
-            jupyter_active = True
-        except:
-            jupyter_active = False
-        else:
-            jupyter_active = True
-    else:
-        jupyter_active = False
-
+if 'IPython' in ipython_status():
     from IPython.display import display
-
-
-
+    try:
+        if 'larch' not in sys.modules and 'larch4' not in sys.modules:
+            from .styles import stylesheet
+            stylesheet()
+            display(_i)
+    except:
+        if 'larch' not in sys.modules and 'larch4' not in sys.modules:
+            print(repr(_i))
+        jupyter_active = False
+    else:
+        jupyter_active = True
+else:
+    jupyter_active = False
+    if 'larch' not in sys.modules and 'larch4' not in sys.modules:
+        print(repr(_i))
 
 ## most common items here
 
