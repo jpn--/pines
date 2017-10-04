@@ -21,11 +21,14 @@ def info():
 
 class Info:
 
-    def __init__(self, appname='Pines Toolkit'):
+    def __init__(self, appname='Pines Toolkit', extra=True, version=None):
         self.appname = appname
+        self.extra = extra
+        self.version = version or __version__
+
 
     def __repr__(self):
-        r = (f"┌── PINES TOOLKIT {__version__} " + "─" * (57 - len(__version__)))
+        r = (f"┌── {self.appname.upper()} {self.version} " + "─" * (57 - len(self.version)))
         v = '\n│'.join(sys.version.split('\n'))
         r += (f"\n│Python {v}")
         r += (f"\n│EXE ─ {sys.executable}")
@@ -50,22 +53,22 @@ class Info:
             'src': "data:image/png;base64,{}".format(favicon),
             'style': 'float:left;position:relative;top:-3px;padding-right:0.2em;'
         }, tail=f" {self.appname} ")
-        p << Elem('span', {'class': 'larch_head_tag_ver'}, text=__version__)
+        p << Elem('span', {'class': 'larch_head_tag_ver'}, text=self.version)
         xsign << p
         xsign << Elem('img', {'src': "https://www.camsys.com/sites/default/files/camsys_logo.png",
                               'style': 'float:right;max-height:48px;margin-top:0'})
-
-        v = '\n│'.join(sys.version.split('\n'))
-        xsign << Elem('br')
-        xinfo = Elem('div', {'class': 'larch_head_tag_more', 'style':'margin-top:10px; padding:7px'}, text=f'Python {v}')
-        xsign << xinfo
-        xinfo << Elem('br', tail=f"EXE - {sys.executable}")
-        xinfo << Elem('br', tail=f"CWD - {os.getcwd()}")
-        xinfo << Elem('br', tail=f"PATH - ")
-        ul = Elem('ul', {'style': 'margin-top:0; margin-bottom:0;'})
-        xinfo << ul
-        for p in sys.path:
-            ul << Elem('li', text=p)
+        if self.extra:
+            v = '\n│'.join(sys.version.split('\n'))
+            xsign << Elem('br')
+            xinfo = Elem('div', {'class': 'larch_head_tag_more', 'style':'margin-top:10px; padding:7px'}, text=f'Python {v}')
+            xsign << xinfo
+            xinfo << Elem('br', tail=f"EXE - {sys.executable}")
+            xinfo << Elem('br', tail=f"CWD - {os.getcwd()}")
+            xinfo << Elem('br', tail=f"PATH - ")
+            ul = Elem('ul', {'style': 'margin-top:0; margin-bottom:0;'})
+            xinfo << ul
+            for p in sys.path:
+                ul << Elem('li', text=p)
         return xsign.tostring().decode()
 
 
