@@ -131,6 +131,14 @@ def latest_matching(pattern, echo=False, case_insensitive=False):
 			propose = file
 	return propose
 
+def which_file_created_more_recently(filename1, filename2):
+	(mode1, ino1, dev1, nlink1, uid1, gid1, size1, atime1, mtime1, ctime1) = os.stat(filename1)
+	(mode2, ino2, dev2, nlink2, uid2, gid2, size2, atime2, mtime2, ctime2) = os.stat(filename2)
+	if ctime1<ctime2:
+		return 1
+	if ctime1>=ctime2:
+		return 0
+
 
 def single_matching(pattern, case_insensitive=False):
 	"Get the only file matching a glob pattern, if 0 or 2+ matches raise NameError"

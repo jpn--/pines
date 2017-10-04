@@ -109,6 +109,7 @@ def check_config(checklist, secrets, window_title="PINES CONFIG"):
         return entry
 
     ents = []
+    rownum = 0
     for rownum, check in enumerate(checklist):
         ents.append(makeentry(master, check, width=90, row=rownum))
         ents[-1].delete(0, END)
