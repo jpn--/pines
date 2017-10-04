@@ -55,8 +55,12 @@ class Info:
         }, tail=f" {self.appname} ")
         p << Elem('span', {'class': 'larch_head_tag_ver'}, text=self.version)
         xsign << p
-        xsign << Elem('img', {'src': "https://www.camsys.com/sites/default/files/camsys_logo.png",
-                              'style': 'float:right;max-height:48px;margin-top:0'})
+        from .img import camsyslogo_element
+        xsign << camsyslogo_element
+        if 'larch4' in sys.modules:
+            from .img import georgiatechlogo_element
+            xsign << georgiatechlogo_element
+
         if self.extra:
             v = '\n│'.join(sys.version.split('\n'))
             xsign << Elem('br')
