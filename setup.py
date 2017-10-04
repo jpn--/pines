@@ -73,11 +73,16 @@ setup(
                 'pines_pip_rebuild = pines.private_pip:pip_rebuild',
                 'pines_pip = pines.private_pip:_pip_install_entry',
                 'pines-pip = pines.private_pip:_pip_install_entry',
+                'omx-cube-convert = pines.omx_cube_converter:convert',
             ],
 
             'gui_scripts': [
                 'pines_cluster_worker = pines.daskworker:new_worker',
                 'cluster_q = pines.daskworker:new_worker_with_egnyte',
             ]
+    },
+
+    package_data={
+        '': ['*.exe',],
     }
 )
