@@ -23,6 +23,7 @@ def convert():
 	args = parser.parse_args()
 
 	os.chdir(args.indir[0])
+	os.environ['PATH'] = os.environ['PATH'] + ";C:\\Program Files\\Citilabs\\CubeVoyager\\;C:\\Program Files (x86)\\Citilabs\\CubeVoyager\\"
 
 	out_dir = args.outdir
 	if out_dir is None:
