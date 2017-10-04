@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__version__ = '2.66'
+__version__ = '2.67'
 
 import sys, os
 
