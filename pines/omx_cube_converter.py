@@ -5,6 +5,8 @@ import argparse
 import os
 import subprocess
 
+_omx_convert_exe = os.path.join(os.path.abspath(os.path.dirname(__file__)),'omx_convert.exe')
+
 
 def convert():
 	parser = argparse.ArgumentParser()
@@ -14,7 +16,7 @@ def convert():
 	parser.add_argument("outdir", nargs='?', default=None, type=str)
 	parser.add_argument("-p", "--pattern", help="pattern to find matrix files", type=str, nargs='?', default='*.mat')
 	parser.add_argument("-e", "--executable", help="exe conversion tool path", type=str, nargs='?',
-						default='N:/omxconvert/omx_convert.exe')
+						default=_omx_convert_exe)
 	parser.add_argument("-z", "--compress", help="set the compression level", type=int, nargs='?', default=7)
 	parser.add_argument("-s", "--chunksize", help="set the chunksize", type=int, nargs='?', default=128000)
 
