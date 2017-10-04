@@ -73,7 +73,7 @@ class Info:
             xinfo << ul
             for p in sys.path:
                 ul << Elem('li', text=p)
-        return xsign.tostring().decode()
+        return xsign.tostring()
 
 
 

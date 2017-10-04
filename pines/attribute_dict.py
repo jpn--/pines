@@ -17,11 +17,22 @@ class dicta(dict):
 			return '\n'.join([k.rjust(m) + ': ' + repr(v) for k, v in self.items()])
 		else:
 			return self.__class__.__name__ + "()"
-
-
-
-
-
+	def __xml__(self):
+		from .xhtml import Elem
+		x = Elem('div')
+		t = x.put('table')
+		for k, v in self.items():
+			tr = t.put('tr')
+			tr.put('td', text=k, style='font-weight:bold;vertical-align:top;')
+			try:
+				v_xml = v.__xml__()
+			except AttributeError:
+				tr.put('td').put('pre', text=repr(v))
+			else:
+				tr.append(v_xml)
+		return x
+	def _repr_html_(self):
+		return self.__xml__().tostring()
 
 
 class function_cache(dict):

@@ -152,8 +152,11 @@ class Elem(Element):
 			self.append(other)
 		return self
 
-	def tostring(self):
+	def tobytes(self):
 		return xml.etree.ElementTree.tostring(self, encoding="utf8", method="html")
+
+	def tostring(self):
+		return self.tobytes().decode()
 
 	def _repr_html_(self):
 		return self.tostring().decode()
