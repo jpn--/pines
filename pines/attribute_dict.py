@@ -45,9 +45,27 @@ class function_cache(dict):
 
 
 
-
-class quickdot(dict):
-	'''Autoexpanding dictionary with attribute access.'''
+class dictal(dict):
+	'''Dictionary with attribute access and lowercase str keys.'''
+	def __init__(self, *args, **kwargs):
+		super().__init__()
+		for arg in args:
+			for key,val in arg.items():
+				self[key] = val
+		for key,val in kwargs.items():
+			self[key] = val
+	def __setitem__(self, key, val):
+		if not isinstance(key,str):
+			raise TypeError("dictal keys must be strings")
+		return super().__setitem__(key.casefold(), val)
+	def __getitem__(self, key):
+		if not isinstance(key,str):
+			raise TypeError("dictal keys must be strings")
+		return super().__getitem__(key.casefold())
+	def __delitem__(self, key):
+		if not isinstance(key,str):
+			raise TypeError("dictal keys must be strings")
+		return super().__delitem__(key.casefold())
 	def __getattr__(self, name):
 		try:
 			return self[name]
@@ -55,8 +73,20 @@ class quickdot(dict):
 			if '_helper' in self:
 				return self['_helper'](name)
 			raise AttributeError(name)
-	__setattr__ = dict.__setitem__
-	__delattr__ = dict.__delitem__
+	__setattr__ = __setitem__
+	__delattr__ = __delitem__
+	def __repr__(self):
+		if self.keys():
+			m = max(map(len, list(self.keys()))) + 1
+			return '\n'.join([k.rjust(m) + ': ' + repr(v) for k, v in self.items()])
+		else:
+			return self.__class__.__name__ + "()"
+
+
+
+
+class quickdot(dicta):
+	'''Autoexpanding dictionary with attribute access.'''
 	def __repr__(self):
 		if self.keys():
 			m = max(map(len, list(self.keys()))) + 1
@@ -153,7 +183,8 @@ def add_to_quickdot(qdot,tag,value):
 
 
 class fdict(dicta):
-	def __init__(self, **kw):
+	def __init__(self, *args, **kw):
+		super().__init__(*args)
 		for key,val in kw.items():
 			if not isinstance(val,str):
 				self[key] = val
@@ -173,3 +204,6 @@ class fdict(dicta):
 		for key,val in temp1.items():
 			self[key] = val.format(**self)
 
+
+
+qdict = quickdot
