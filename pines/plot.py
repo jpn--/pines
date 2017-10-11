@@ -56,6 +56,9 @@ def heatmap(x,y, xlabel=None, ylabel=None, title=None, bins=(100,100),
 	else:
 		binsX_ = binsX
 
+	if isinstance(binsX_, int):
+		binsX_ = numpy.linspace(numpy.nanmin(x), numpy.nanmax(x), binsX_)
+
 	if pctile[1] or pctile[1]:
 		binsY = numpy.percentile(y, numpy.linspace(0,100,bins[1]))
 		for i in range(1,len(binsY)):
@@ -69,6 +72,10 @@ def heatmap(x,y, xlabel=None, ylabel=None, title=None, bins=(100,100),
 		trim_y = 0
 	else:
 		binsY_ = binsY
+
+	if isinstance(binsY_, int):
+		binsY_ = numpy.linspace(numpy.nanmin(y), numpy.nanmax(y), binsY_)
+
 	try:
 		heatmap, yedges, xedges = numpy.histogram2d(y, x, bins=(binsY_,binsX_))
 	except ValueError:
@@ -88,7 +95,13 @@ def heatmap(x,y, xlabel=None, ylabel=None, title=None, bins=(100,100),
 
 	heatmap_ = numpy.zeros([heatmap.shape[0]+1, heatmap.shape[1]+1], dtype=heatmap.dtype)
 	heatmap_[:-1,:-1] = heatmap
-	quads = ax.pcolormesh(binsX_, binsY_, heatmap_, cmap=cmap, vmin=zmin, vmax=zmax, **kwargs)
+	try:
+		quads = ax.pcolormesh(binsX_, binsY_, heatmap_, cmap=cmap, vmin=zmin, vmax=zmax, **kwargs)
+	except:
+		print(binsX_)
+		print(binsY_)
+		print(heatmap_)
+		raise
 
 	ymin, ymax = numpy.percentile(y, [trim_y, 100-trim_y])
 
