@@ -1,6 +1,173 @@
 import matplotlib.pyplot as plt
 import numpy
 
+def percentilize(x):
+	return numpy.argsort(numpy.argsort(x)) / len(x) * 100.0
+
+def homogeneous_size_bins(nbins, arr, robustness=0):
+	"""
+	Find bins with homogeneous size
+
+	Parameters
+	----------
+	nbins : int
+		number of bins to create
+	arr : array-like
+		the data to get binned
+	robustness : int
+		chop this many percentiles off the top and bottom of the range
+
+	Returns
+	-------
+	ndarray
+		the bin edges (length nbins+1)
+
+	"""
+	if robustness:
+		bottom = numpy.nanpercentile(arr, robustness)
+		top = numpy.nanpercentile(arr, 100-robustness)
+	else:
+		bottom = numpy.nanmin(arr)
+		top = numpy.nanmax(arr)
+	return numpy.linspace(bottom, top, nbins+1)
+
+def homogeneous_mass_bins(nbins, arr, robustness=0):
+	"""
+	Find bins with homogeneous mass
+
+	Parameters
+	----------
+	nbins : int
+		number of bins to create
+	arr : array-like
+		the data to get binned
+	robustness : int
+		chop this many percentiles off the top and bottom of the range
+
+	Returns
+	-------
+	ndarray
+		the bin edges (length nbins+1)
+
+	"""
+	bottom = robustness
+	top = 100-robustness
+	return numpy.nanpercentile(arr, numpy.linspace(bottom, top, nbins+1))
+
+def n_uniques(arr, stop_at=10):
+	u = set()
+	for i in arr:
+		u.add(i)
+		if len(u)>=stop_at:
+			return stop_at, u
+	return len(u), sorted(u)
+
+def punique(arr, uniq):
+	digitizer = list(uniq)
+	digitizer.append(numpy.inf)
+	bins = numpy.arange(len(uniq) + 1)
+	ticks = bins[:-1] + 0.5, uniq
+	a = numpy.digitize(arr, digitizer, right=False)
+	return a, bins, ticks
+
+def psize(arr, nbins, robustness=0):
+	n_uniq, uniq = n_uniques(arr, nbins+1)
+	if n_uniq <= nbins:
+		return punique(arr, uniq)
+	else:
+		bins = homogeneous_size_bins(nbins, arr, robustness=robustness)
+		a = numpy.digitize(arr, bins, right=True)
+		ticks = None
+	return a, bins, ticks
+
+def pmass(arr, nbins, robustness=0):
+	n_uniq, uniq = n_uniques(arr, nbins+1)
+	if n_uniq <= nbins:
+		return punique(arr, uniq)
+	else:
+		bins = homogeneous_mass_bins(nbins, arr, robustness=robustness)
+		a = numpy.digitize(arr, bins, right=True)
+		ticks = None
+	return a, bins, ticks
+
+def pmass_even(arr, nbins, robustness=0):
+	a, _, ticks = pmass(arr, nbins, robustness)
+	bins = numpy.linspace(robustness, 100-robustness, nbins+1)
+	return a, bins, ticks
+
+def _generate_heatmap(
+		x_digitized,
+		x_bins,
+		x_ticks,
+		y_digitized,
+		y_bins,
+		y_ticks,
+		normalize_dim='',
+		cmap='jet',
+		z_robustness=2,
+		z_min=None,
+		z_max=None,
+		clf=True,
+		subplot=(1,1,1),
+		x_label=None,
+		y_label=None,
+		title=None,
+		**kwargs
+):
+	bins = (numpy.arange(1,len(x_bins)+1)-0.5, numpy.arange(1,len(y_bins)+1)-0.5)
+
+	# print("bins", bins)
+	# print("x_bins", x_bins)
+	# print("y_bins", y_bins)
+	# print("x_", numpy.unique(x_digitized, return_counts=True))
+	# print("y_", numpy.unique(y_digitized, return_counts=True))
+
+	h,h1,h2 = numpy.histogram2d(
+		x_digitized, y_digitized,
+		bins=bins,
+	)
+
+	if normalize_dim.lower()=='y':
+		h /= h.sum(0)[None,:]
+	elif normalize_dim.lower()=='x':
+		h /= h.sum(1)[:,None]
+
+	if z_min is None:
+		z_min = numpy.percentile(h,z_robustness)
+	if z_max is None:
+		z_max = numpy.percentile(h,100-z_robustness)
+
+	if clf:
+		plt.clf()
+	ax = plt.subplot(*subplot)
+
+	heatmap_ = numpy.zeros([h.shape[0]+1, h.shape[1]+1], dtype=h.dtype)
+	heatmap_[:-1,:-1] = h
+
+	quads = ax.pcolormesh(x_bins, y_bins, heatmap_.T, cmap=cmap, vmin=z_min, vmax=z_max, **kwargs)
+
+	cbar = plt.colorbar(quads, ax=ax)
+	if x_label:
+		plt.xlabel(f'{x_label}')
+	if y_label:
+		plt.ylabel(f'{y_label}')
+	if title:
+		plt.title(title)
+	if x_ticks:
+		plt.xticks(*x_ticks, rotation='vertical')
+	if y_ticks:
+		plt.yticks(*y_ticks)
+
+	#return h,h1,h2
+
+def heatmapper( x, y, x_robustness=0, y_robustness=0, **kwargs ):
+	if isinstance(x, numpy.ndarray):
+		x = psize(x,10,x_robustness)
+	if isinstance(y, numpy.ndarray):
+		y = psize(y,10,y_robustness)
+	return _generate_heatmap( *x, *y, **kwargs)
+
+
 def heatmap(x,y, xlabel=None, ylabel=None, title=None, bins=(100,100),
 			pctile=(True, False), rpctile=(False,False), cmap='jet', # 'viridis',
 			robustness=2, trim_y=1, docx_writer=None,
