@@ -161,6 +161,19 @@ def _generate_heatmap(
 	#return h,h1,h2
 
 def heatmapper( x, y, x_robustness=0, y_robustness=0, **kwargs ):
+	"""
+	Create a heatmap
+
+	Parameters
+	----------
+	x, y : array or tuple
+		Either an array or a tuple generated from psize, pmass, or pmass_even
+	x_robustness, y_robustness : numeric
+		if x or y is an array, use this robustness value to trim the extremes
+	kwargs
+		passed to _generate_heatmap
+
+	"""
 	if isinstance(x, numpy.ndarray):
 		x = psize(x,10,x_robustness)
 	if isinstance(y, numpy.ndarray):
