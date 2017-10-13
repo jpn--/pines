@@ -158,7 +158,51 @@ def _generate_heatmap(
 	if y_ticks:
 		plt.yticks(*y_ticks)
 
-	#return h,h1,h2
+
+def heatmap_dataframe(
+		x_digitized,
+		x_bins,
+		x_ticks,
+		y_digitized,
+		y_bins,
+		y_ticks,
+		normalize_dim='',
+		tick_fmt='.2f',
+		**kwargs
+):
+	bins = (numpy.arange(1,len(x_bins)+1)-0.5, numpy.arange(1,len(y_bins)+1)-0.5)
+
+	# print("bins", bins)
+	# print("x_bins", x_bins)
+	# print("y_bins", y_bins)
+	# print("x_", numpy.unique(x_digitized, return_counts=True))
+	# print("y_", numpy.unique(y_digitized, return_counts=True))
+
+	h,h1,h2 = numpy.histogram2d(
+		x_digitized, y_digitized,
+		bins=bins,
+	)
+
+	if normalize_dim.lower()=='y':
+		h /= h.sum(0)[None,:]
+	elif normalize_dim.lower()=='x':
+		h /= h.sum(1)[:,None]
+
+	if x_ticks is not None:
+		cols = x_ticks[1]
+	else:
+		cols = [f"{i:{tick_fmt}} to {j:{tick_fmt}}" for i,j in zip(x_bins[:-1],x_bins[1:])]
+	if y_ticks is not None:
+		rows = y_ticks[1]
+	else:
+		rows = [f"{i:{tick_fmt}} to {j:{tick_fmt}}" for i,j in zip(y_bins[:-1],y_bins[1:])]
+
+	import pandas
+	return pandas.DataFrame(
+		data=h,
+		columns=cols,
+		index=rows,
+	)
 
 def heatmapper( x, y, x_robustness=0, y_robustness=0, **kwargs ):
 	"""
@@ -179,6 +223,34 @@ def heatmapper( x, y, x_robustness=0, y_robustness=0, **kwargs ):
 	if isinstance(y, numpy.ndarray):
 		y = psize(y,10,y_robustness)
 	return _generate_heatmap( *x, *y, **kwargs)
+
+def heatmap_sns(x, y, x_robustness=0, y_robustness=0, max_dim=20, **kwargs):
+	"""
+	Create a heatmap using seaborn
+
+	Parameters
+	----------
+	x, y : array or tuple
+		Either an array or a tuple generated from psize, pmass, or pmass_even
+	x_robustness, y_robustness : numeric
+		if x or y is an array, use this robustness value to trim the extremes
+	kwargs
+		passed to _generate_heatmap
+
+	"""
+	if isinstance(x, numpy.ndarray):
+		x = psize(x,max_dim,x_robustness)
+	if isinstance(y, numpy.ndarray):
+		y = psize(y,max_dim,y_robustness)
+	frame = heatmap_dataframe( *x, *y )
+	import seaborn
+	return seaborn.heatmap(frame, **kwargs)
+
+
+
+
+
+
 
 
 def heatmap(x,y, xlabel=None, ylabel=None, title=None, bins=(100,100),
