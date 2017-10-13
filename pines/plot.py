@@ -199,10 +199,10 @@ def heatmap_dataframe(
 
 	import pandas
 	return pandas.DataFrame(
-		data=h,
+		data=h.T,
 		columns=cols,
 		index=rows,
-	)
+	).iloc[::-1]
 
 def heatmapper( x, y, x_robustness=0, y_robustness=0, **kwargs ):
 	"""
