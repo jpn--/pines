@@ -4,6 +4,7 @@
 from collections import Iterator
 from threading import Lock
 import time
+import functools
 
 class RateLimiter(Iterator):
     """Iterator that yields a value at most once every 'interval' seconds."""
@@ -29,3 +30,22 @@ def GlobalRateLimiter(tag, interval=1, wait_now=True):
         _global_rate_limiters[tag] = RateLimiter(interval)
     if wait_now:
         return next(_global_rate_limiters[tag])
+
+
+
+
+class NonBlockingRateLimiter():
+    def __init__(self, interval):
+        self.lock = Lock()
+        self.interval = interval
+        self.next_greenlight = 0
+
+    def __call__(self, fn):
+        @functools.wraps(fn)
+        def decorated(*args, **kwargs):
+            t = time.monotonic()
+            if t >= self.next_greenlight:
+                with self.lock:
+                    self.next_greenlight = t + self.interval
+                    fn(*args, **kwargs)
+        return decorated
