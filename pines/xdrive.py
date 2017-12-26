@@ -15,7 +15,7 @@ from .bytesize import bytes_scaled
 from .codex import phash
 from .configure import load as load_config
 
-elog = flogger(label='EGNYTE')
+elog = flogger(label='XDRIVE')
 
 
 ## init
