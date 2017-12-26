@@ -79,3 +79,16 @@ def zipmod_temp(module, skip_dots=True):
 	zip_file_name = os.path.join(tempdir.name, module.__name__+".zip")
 	zipmod(module, zip_file_name, skip_dots=skip_dots)
 	return zip_file_name, tempdir
+
+
+def gzip_dir(source_dir, pattern="*.*"):
+	"""Individually gzip every file matching pattern in source_dir."""
+
+	import gzip, glob
+	import shutil, os
+
+	for f in glob.glob(os.path.join(source_dir, pattern)):
+		with open(f, 'rb') as f_in:
+			with gzip.open(f + '.gz', 'wb') as f_out:
+				shutil.copyfileobj(f_in, f_out)
+		os.remove(f)
