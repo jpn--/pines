@@ -35,3 +35,11 @@ def pip_rebuild():
 	libpip2pi.commands.dir2pi(argv=["dir2pi",local_repo, '-S'])
 	copy_tree(os.path.join(local_repo, 'simple\\'), private_repo)
 
+def pip_info(package_name):
+	from io import StringIO
+	import sys
+	old_stdout = sys.stdout
+	sys.stdout = mystdout = StringIO()
+	pip.main(['show',package_name])
+	sys.stdout = old_stdout
+	return mystdout.getvalue()
