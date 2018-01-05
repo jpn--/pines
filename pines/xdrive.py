@@ -173,7 +173,9 @@ def download_file_gz(egnyte_file, local_path, overwrite=False, mkdir=True, progr
 		with open(os.path.join(local_path, basename), 'wb') as f_out:
 			shutil.copyfileobj(buffer_in, f_out)
 	progress_callbacks.download_finish(file_obj)
-
+	from .zipdir import verify_hash_file
+	if os.path.exists(egnyte_file[:-3] + ".sha256.txt"):
+		verify_hash_file(os.path.join(local_path, basename), hash_dir=os.path.dirname(egnyte_file))
 
 def download_dict_json(egnyte_file, progress_callbacks=None, retries=10, interval=1):
 	"""

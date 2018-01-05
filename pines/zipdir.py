@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import os
 import zipfile
-
+import hashlib
 
 
 def _rec_split(s):
@@ -81,13 +81,44 @@ def zipmod_temp(module, skip_dots=True):
 	return zip_file_name, tempdir
 
 
-def gzip_dir(source_dir, pattern="*.*"):
+def make_hash_file(fname):
+	hash256 = hashlib.sha256()
+	with open(fname, "rb") as f:
+		for chunk in iter(lambda: f.read(4096), b""):
+			hash256.update(chunk)
+	h = hash256.hexdigest()
+	with open( fname+".sha256.txt" , "w") as fh:
+		fh.write(h)
+
+def verify_hash_file(fname, hash_dir=None):
+	hash256 = hashlib.sha256()
+	with open(fname, "rb") as f:
+		for chunk in iter(lambda: f.read(4096), b""):
+			hash256.update(chunk)
+	h = hash256.hexdigest()
+	if hash_dir is None:
+		with open( fname+".sha256.txt" , "r") as fh:
+			h_x = fh.read()
+	else:
+		with open( os.path.join(hash_dir, os.path.basename(fname)+".sha256.txt" ) , "r") as fh:
+			h_x = fh.read()
+	if h != h_x:
+		if hash_dir:
+			raise ValueError(f"bad hash on {fname} with hash_dir={hash_dir}")
+		else:
+			raise ValueError(f"bad hash on {fname}")
+
+
+
+def gzip_dir(source_dir, pattern="*.*", make_hash=True):
 	"""Individually gzip every file matching pattern in source_dir."""
 
 	import gzip, glob
 	import shutil, os
 
 	for f in glob.glob(os.path.join(source_dir, pattern)):
+		if make_hash:
+			make_hash_file(f)
 		with open(f, 'rb') as f_in:
 			with gzip.open(f + '.gz', 'wb') as f_out:
 				shutil.copyfileobj(f_in, f_out)
