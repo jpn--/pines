@@ -1,9 +1,9 @@
 package:
   name: pines
-  version: "2.75.0"
+  version: "2.76.0"
 
 source:
-  git_rev: v2.75.0
+  git_rev: v2.76.0
   git_url: https://github.com/jpn--/pines.git
 
 requirements:
