@@ -119,13 +119,15 @@ def verify_hash_file(fname, hash_dir=None):
 
 
 
-def gzip_dir(source_dir, pattern="*.*", make_hash=True):
+def gzip_dir(source_dir, pattern="*.*", make_hash=True, exclude=".sha256.txt"):
 	"""Individually gzip every file matching pattern in source_dir."""
 
 	import gzip, glob
 	import shutil, os
 
 	for f in glob.glob(os.path.join(source_dir, pattern)):
+		if exclude in f:
+			continue # don't re-gzip the hash files by default
 		if make_hash:
 			make_hash_file(f)
 		if f[-3:]!='.gz':
