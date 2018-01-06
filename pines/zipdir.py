@@ -128,7 +128,8 @@ def gzip_dir(source_dir, pattern="*.*", make_hash=True):
 	for f in glob.glob(os.path.join(source_dir, pattern)):
 		if make_hash:
 			make_hash_file(f)
-		with open(f, 'rb') as f_in:
-			with gzip.open(f + '.gz', 'wb') as f_out:
-				shutil.copyfileobj(f_in, f_out)
-		os.remove(f)
+		if f[-3:]!='.gz':
+			with open(f, 'rb') as f_in:
+				with gzip.open(f + '.gz', 'wb') as f_out:
+					shutil.copyfileobj(f_in, f_out)
+			os.remove(f)
