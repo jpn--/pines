@@ -83,12 +83,21 @@ def zipmod_temp(module, skip_dots=True):
 
 def make_hash_file(fname):
 	hash256 = hashlib.sha256()
-	with open(fname, "rb") as f:
-		for chunk in iter(lambda: f.read(4096), b""):
-			hash256.update(chunk)
-	h = hash256.hexdigest()
-	with open( fname+".sha256.txt" , "w") as fh:
-		fh.write(h)
+	if fname[-3:]=='.gz':
+		import gzip
+		with gzip.open(fname, "rb") as f:
+			for chunk in iter(lambda: f.read(4096), b""):
+				hash256.update(chunk)
+		h = hash256.hexdigest()
+		with open(fname[:-3] + ".sha256.txt", "w") as fh:
+			fh.write(h)
+	else:
+		with open(fname, "rb") as f:
+			for chunk in iter(lambda: f.read(4096), b""):
+				hash256.update(chunk)
+		h = hash256.hexdigest()
+		with open( fname+".sha256.txt" , "w") as fh:
+			fh.write(h)
 
 def verify_hash_file(fname, hash_dir=None):
 	hash256 = hashlib.sha256()
