@@ -99,11 +99,24 @@ def make_hash_file(fname):
 		with open( fname+".sha256.txt" , "w") as fh:
 			fh.write(h)
 
-def verify_hash_file(fname, hash_dir=None):
+def verify_hash_file(fname, hash_dir=None, max_retries=5):
 	hash256 = hashlib.sha256()
-	with open(fname, "rb") as f:
-		for chunk in iter(lambda: f.read(4096), b""):
-			hash256.update(chunk)
+
+	retries = 0
+	while retries < max_retries:
+		try:
+			with open(fname, "rb") as f:
+				for chunk in iter(lambda: f.read(4096), b""):
+					hash256.update(chunk)
+		except PermissionError:
+			import time
+			time.sleep(5)
+			retries += 1
+		except:
+			raise
+		else:
+			break
+			
 	h = hash256.hexdigest()
 	if hash_dir is None:
 		with open( fname+".sha256.txt" , "r") as fh:
