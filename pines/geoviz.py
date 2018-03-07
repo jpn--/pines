@@ -4,6 +4,8 @@ import numpy
 import matplotlib
 import matplotlib.pyplot as plt
 
+from geopandas import read_file # convenience
+
 class Map:
 	def __init__(self,
 				 center=(None,None), extent=(None,None),
@@ -23,93 +25,98 @@ class Map:
 		elif ylim is not None:
 			ax.set_ylim(*ylim)
 
-		ax.set_xticks([] if xticks is None else xticks)
-		ax.set_yticks([] if yticks is None else yticks)
+		if xticks is None or xticks is False:
+			ax.set_xticks([])
+		elif xticks is not True:
+			ax.set_xticks(xticks)
 
-		if title is not None:
-			ax.set_title(title)
+		if yticks is None or yticks is False:
+			ax.set_yticks([])
+		elif yticks is not True:
+			ax.set_yticks(yticks)
+
 		if bgcolor is not None:
 			fig.patch.set_facecolor(bgcolor)
 
 		self.ax = ax
 		self.fig = fig
 
-	def choropleth(self, gdf, column, cmap=None, legend=True, vmin=None, vmax=None):
-		gdf.plot(
+		self.set_title(title)
+
+
+	def set_title(self, title):
+		self._title = title
+		if title is not None:
+			self.ax.set_title(title)
+
+	def __repr__(self):
+		if self._title:
+			return f"<pines.geoviz.Map: {self._title}>"
+		else:
+			return f"<pines.geoviz.Map: Untitled>"
+
+	def choropleth(self, gdf, column, cmap=None, legend=True, vmin=None, vmax=None, labels=None, **kwargs):
+		y = gdf.plot(
 			ax=self.ax,
 			column=column,
 			cmap=cmap,
 			legend=legend,
 			vmin=vmin,
 			vmax=vmax,
+			**kwargs
 		)
+		if labels is not None:
+			from seaborn.utils import relative_luminance
+			areacolors = y.collections[0].get_facecolors()
+			label_col = labels.pop('column')
+			formatter = labels.pop('formatter', lambda x: x)
+			for r in range(len(gdf)):
+				self.ax.annotate(
+					s=str(formatter(gdf.iloc[r][label_col])),
+					xy=gdf.iloc[r].geometry.representative_point().coords[0],
+					ha='center', va='center', clip_on=True,
+					color=".15" if relative_luminance(areacolors[r]) > .408 else "w",
+					**labels
+				)
+		return self
 
-	def invalid_area(self, gdf, color='#000000AA'):
+	def invalid_area(self, gdf, color='#000000AA', **kwargs):
 		gdf.plot(
 			ax=self.ax,
 			color=color,
+			**kwargs
 		)
+		return self
 
-	def borderlines(self, gdf, edgecolor="#000000FF", weight=1):
+	def borderlines(self, gdf, edgecolor="#000000FF", weight=1, **kwargs):
 		gdf.plot(
 			ax=self.ax,
 			color="#FFFFFF00", # transparent fill color
 			edgecolor=edgecolor,
 			linewidth=weight,
+			**kwargs
 		)
+		return self
 
-	def labels(self, gdf, column, **kwargs):
+	def labels(self, gdf, column, formatter=lambda x:x, **kwargs):
 		if column not in gdf.columns:
 			raise KeyError(f'column "{column}" not in gdf.columns')
 		gdf.apply(
 			lambda x: self.ax.annotate(
-				s=str(x[column]), xy=x.geometry.centroid.coords[0],
+				s=str(formatter(x[column])), xy=x.geometry.centroid.coords[0],
 				ha='center', va='center', clip_on=True,
 				**kwargs
 			),
 			axis=1
 		)
+		return self
 
 
+class MapMaker:
+	def __init__(self, *args, **kwargs):
+		self._args = args
+		self._kwargs = kwargs
 
-#
-# def map_showing(
-# 		column,
-# 		title=None,
-# 		invalid=None,
-# 		vmin=None,
-# 		vmax=None,
-# 		invalid_color='#000000AA',
-# 		gdf=None,
-# 		cmap='OrRd',
-# 		gdf_labels=None,
-# 		gdf_label_col=None,
-# 		gdf_heavy=None
-# ):
-# 	if gdf is None:
-# 		gdf = geo
-# 	j = 5000
-# 	k = 20000
-# 	fig, ax = plt.subplots()
-# 	ax.set_aspect('equal')
-# 	ax.set_xlim(435000+j,530000-j)
-# 	ax.set_ylim(4935000+k,5025000-k)
-# 	ax.set_xticks([])
-# 	ax.set_yticks([])
-# 	gdf.plot(ax=ax, column=column, cmap=cmap, legend=True, vmin=vmin, vmax=vmax)
-# 	if invalid:
-# 		blackout = matplotlib.colors.LinearSegmentedColormap.from_list('BlackOut', ['#00000000',invalid_color,])
-# 		gdf.plot(ax=ax, column=invalid, cmap=blackout)
-# 	districts.plot(ax=ax, color="#FFFFFF00", edgecolor="#00000044")
-# 	if title is not None:
-# 		ax.set_title(title)
-# 	if gdf_labels is not None:
-# 		gdf_labels.apply(
-# 			lambda x: ax.annotate(s=str(x[gdf_label_col]),
-# 								  xy=x.geometry.centroid.coords[0],
-# 								  ha='center', clip_on=True),
-# 			axis=1
-# 		)
-# 	if gdf_heavy is not None:
-# 		gdf_heavy.plot(ax=ax, color="#FFFFFF00", edgecolor="#000000FF", linewidth=2)
-# 	fig.patch.set_facecolor('white')
+	def __call__(self, **kwargs):
+		return Map(*self._args, **self._kwargs, **kwargs)
+
