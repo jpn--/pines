@@ -15,14 +15,14 @@ def notebook_save():
 	display(Javascript('IPython.notebook.save_checkpoint();'))
 
 
-def notebook_execute(notebook_filename, kernel_name='Python 3.6', timeout=600, execution_dir='notebooks/', output_filemark=None):
+def notebook_execute(notebook_filename, kernel_name='python3', timeout=600, execution_dir='./', output_filemark="", output_timestamp=True):
 	import nbformat
 	from nbconvert.preprocessors import ExecutePreprocessor
 
-	if output_filemark is None:
-		output_filemark = time.strftime("%Y.%m.%d-%H.%M")
+	if output_timestamp:
+		output_filemark += time.strftime(".%Y.%m.%d-%H.%M")
 
-	executed_notebook_filename = "{1}.{0}{2}".format(
+	executed_notebook_filename = "{1}{0}{2}".format(
 		output_filemark,
 		*os.path.splitext(notebook_filename)
 	)
