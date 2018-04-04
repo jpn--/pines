@@ -120,3 +120,17 @@ class MapMaker:
 	def __call__(self, **kwargs):
 		return Map(*self._args, **self._kwargs, **kwargs)
 
+
+
+
+def reduce_coordinate_precision_of_shapefile(in_filename, *out_filename, **kwargs):
+	from shapely.geometry import shape, mapping
+
+	gdf = gpd.read_file(in_filename)
+
+	for xx in gdf.index:
+		geojson = mapping(gdf.geometry[xx])
+		geojson['coordinates'] = numpy.round(numpy.array(geojson['coordinates']), 6)
+		gdf.loc[xx, 'geometry'] = shape(geojson)
+
+	gdf.to_file(*out_filename, **kwargs)
