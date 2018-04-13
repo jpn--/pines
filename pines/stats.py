@@ -86,3 +86,21 @@ def prod_two_triangular_ppf_approx(q, x1_min, x1_mode, x1_max, x2_min, x2_mode, 
 	x2 = triangular( x2_min, x2_mode, x2_max ).ppf(x)
 	x1x2 = numpy.outer(x1,x2).flatten()
 	return numpy.percentile(x1x2,q*100)
+
+
+def quick_linear_regression(X, y, log=None):
+	import statsmodels.api as sm
+	import pandas
+	Xc = sm.add_constant(X)
+	m = sm.OLS(y, Xc, hasconst=True)
+	statsmodel_results = m.fit()
+	if log is not None:
+		log(statsmodel_results.summary())
+
+	sm_df = pandas.concat((statsmodel_results.params,
+						   statsmodel_results.bse,
+						   statsmodel_results.tvalues,
+						   statsmodel_results.pvalues,
+						   statsmodel_results.conf_int()), axis=1)
+	sm_df.columns = ['coef', 'std err', 't', 'P>|t|', '[0.025', '0.975]']
+	return sm_df
