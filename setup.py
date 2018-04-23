@@ -62,6 +62,7 @@ setup(
         'numpy>=1.13.1',
         'scipy>=0.19.0',
         'tables>=3.4.2',
+        'psycopg2',
         # conda install mysql-connector-python
     ],
 

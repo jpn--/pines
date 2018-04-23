@@ -20,6 +20,7 @@ requirements:
     - scipy >=0.19.1
     - pytables >=3.4.2
     - mysql-connector-python >=2.0.4
+    - psycopg2
   run:
     - python >=3.6
     - distributed >=1.17.1
@@ -32,6 +33,7 @@ requirements:
     - scipy >=0.19.1
     - pytables >=3.4.2
     - mysql-connector-python >=2.0.4
+    - psycopg2
 
 test:
   imports:
