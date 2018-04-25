@@ -9,6 +9,7 @@ from sklearn.model_selection import cross_val_score, cross_val_predict
 from sklearn.preprocessing import StandardScaler
 import numpy, pandas
 import scipy.stats
+import warnings
 
 from .attribute_dict import dicta
 
@@ -24,13 +25,19 @@ class LinearRegression(_sklearn_LinearRegression):
 
 		sse = numpy.sum(
 			(self.predict(X) - y) ** 2, axis=0) / float(X.shape[0] - X.shape[1])
-		se = numpy.array([
-			numpy.sqrt(numpy.diagonal(sse[i] * numpy.linalg.inv(numpy.dot(X.T, X))))
-			for i in range(sse.shape[0])
-		])
 
-		self.t_ = self.coef_ / se
-		self.p_ = 2 * (1 - scipy.stats.t.cdf(numpy.abs(self.t_), y.shape[0] - X.shape[1]))
+		inv_X_XT = numpy.linalg.inv(numpy.dot(X.T, X))
+
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore", category=RuntimeWarning)
+			se = numpy.array([
+				numpy.sqrt(numpy.diagonal(sse[i] * inv_X_XT))
+				for i in range(sse.shape[0])
+			])
+
+			self.t_ = self.coef_ / se
+			self.p_ = 2 * (1 - scipy.stats.t.cdf(numpy.abs(self.t_), y.shape[0] - X.shape[1]))
+
 		# try:
 		# 	print(y.values[0])
 		# except AttributeError:
@@ -64,7 +71,8 @@ class LinearAndGaussianProcessRegression(
 		RegressorMixin,
 ):
 
-	def __init__(self):
+	def __init__(self, lr_subset=None):
+		self.lr_subset = lr_subset
 		self.lr = LinearRegression()
 		self.gpr = GaussianProcessRegressor_(n_restarts_optimizer=9)
 		self.y_residual = None
@@ -87,8 +95,17 @@ class LinearAndGaussianProcessRegression(
 		self : returns an instance of self.
 		"""
 		# print("META FIT on",len(X))
-		self.lr.fit(X, y)
-		self.y_residual = y - self.lr.predict(X)
+
+		if isinstance(X, pandas.DataFrame):
+			X = X.values
+
+		if self.lr_subset is not None:
+			X_lr = X[:,self.lr_subset]
+		else:
+			X_lr = X
+
+		self.lr.fit(X_lr, y)
+		self.y_residual = y - self.lr.predict(X_lr)
 		dims = X.shape[1]
 		self.gpr.kernel = self.kernel_generator(dims)
 		self.gpr.fit(X, self.y_residual)
@@ -109,19 +126,37 @@ class LinearAndGaussianProcessRegression(
 		C : array, shape = (n_samples,)
 			Returns predicted values.
 		"""
-		y_hat_lr = self.lr.predict(X=X)
+
+		if isinstance(X, pandas.DataFrame):
+			X = X.values
+
+		if self.lr_subset is not None:
+			X_lr = X[:,self.lr_subset]
+		else:
+			X_lr = X
+
+		y_hat_lr = self.lr.predict(X=X_lr)
 		y_hat_gpr = self.gpr.predict(X)
 		return y_hat_lr + y_hat_gpr
 
 	def cross_val_scores(self, X, y, cv=3, alt_y=None):
+
+		if isinstance(X, pandas.DataFrame):
+			X = X.values
+
+		if self.lr_subset is not None:
+			X_lr = X[:,self.lr_subset]
+		else:
+			X_lr = X
+
 		total = cross_val_score(self, X, y, cv=cv)
-		linear_cv_score = cross_val_score(self.lr, X, y, cv=cv)
-		linear_cv_predict = cross_val_predict(self.lr, X, y, cv=cv)
+		linear_cv_score = cross_val_score(self.lr, X_lr, y, cv=cv)
+		linear_cv_predict = cross_val_predict(self.lr, X_lr, y, cv=cv)
 		linear_cv_residual = y-linear_cv_predict
 		gpr_cv_score = cross_val_score(self.gpr, X, linear_cv_residual, cv=cv)
 
-		self.lr.fit(X, y)
-		y_residual = y - self.lr.predict(X)
+		self.lr.fit(X_lr, y)
+		y_residual = y - self.lr.predict(X_lr)
 		gpr_cv_score2 = cross_val_score(self.gpr, X, y_residual, cv=cv)
 
 		result = dicta(
@@ -142,13 +177,22 @@ class LinearAndGaussianProcessRegression(
 		return result
 
 	def cross_val_predicts(self, X, y, cv=3):
+
+		if isinstance(X, pandas.DataFrame):
+			X = X.values
+
+		if self.lr_subset is not None:
+			X_lr = X[:,self.lr_subset]
+		else:
+			X_lr = X
+
 		total = cross_val_predict(self, X, y, cv=cv)
-		linear_cv_predict = cross_val_predict(self.lr, X, y, cv=cv)
+		linear_cv_predict = cross_val_predict(self.lr, X_lr, y, cv=cv)
 		linear_cv_residual = y-linear_cv_predict
 		gpr_cv_predict_over_cv_linear = cross_val_predict(self.gpr, X, linear_cv_residual, cv=cv)
 
-		self.lr.fit(X, y)
-		linear_full_predict = self.lr.predict(X)
+		self.lr.fit(X_lr, y)
+		linear_full_predict = self.lr.predict(X_lr)
 		y_residual = y - linear_full_predict
 		gpr_cv_predict_over_full_linear = cross_val_predict(self.gpr, X, y_residual, cv=cv)
 
