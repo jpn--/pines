@@ -16,6 +16,7 @@ from sklearn.exceptions import DataConversionWarning
 import numpy, pandas
 import scipy.stats
 import warnings
+import contextlib
 
 from .attribute_dict import dicta
 
@@ -70,6 +71,16 @@ class GaussianProcessRegressor_(GaussianProcessRegressor):
 		#print(" "*55,"GPR PREDICT on", len(X))
 		return super().predict(X, return_std=return_std, return_cov=return_cov)
 
+def _make_as_vector(y):
+	# if isinstance(y, (pandas.DataFrame, pandas.Series)):
+	# 	y = y.values.ravel()
+	return y
+
+@contextlib.contextmanager
+def ignore_warnings(category=Warning):
+	with warnings.catch_warnings():
+		warnings.simplefilter("ignore", category=category)
+		yield
 
 
 class LinearAndGaussianProcessRegression(
@@ -103,6 +114,7 @@ class LinearAndGaussianProcessRegression(
 		if self.core_features is None:
 			return X
 
+		y = _make_as_vector(y)
 		X_core = X.loc[:,self.core_features]
 		X_other = X.loc[:, X.columns.difference(self.core_features)]
 		if X_other.shape[1] <= self.keep_other_features:
@@ -110,7 +122,6 @@ class LinearAndGaussianProcessRegression(
 
 		if y is not None:
 			self.feature_selector = SelectKBest(mutual_info_regression, k=self.keep_other_features).fit(X_other, y)
-			print("keeping:",X_other.columns[self.feature_selector.get_support()])
 
 		X_other = pandas.DataFrame(
 			self.feature_selector.transform(X_other),
@@ -128,6 +139,7 @@ class LinearAndGaussianProcessRegression(
 			print(X_core.info())
 			print(X_other.info())
 			raise
+
 
 	def fit(self, X, y):
 		"""
@@ -161,18 +173,21 @@ class LinearAndGaussianProcessRegression(
 		#
 		# X_other = self.feature_selector.transform(X_other)
 
-		X_core_plus = self._feature_selection(X, y)
+		with ignore_warnings(DataConversionWarning):
 
-		try:
-			self.lr.fit(X_core_plus, y)
-		except:
-			print(X_core_plus)
-			raise
-		self.y_residual = y - self.lr.predict(X_core_plus)
-		dims = X_core_plus.shape[1]
-		self.gpr.kernel = self.kernel_generator(dims)
-		self.gpr.fit(X_core_plus, self.y_residual)
-		# print(self.y_residual.values[0])
+			y = _make_as_vector(y)
+			X_core_plus = self._feature_selection(X, y)
+
+			try:
+				self.lr.fit(X_core_plus, y)
+			except:
+				print(X_core_plus)
+				raise
+			self.y_residual = y - self.lr.predict(X_core_plus)
+			dims = X_core_plus.shape[1]
+			self.gpr.kernel = self.kernel_generator(dims)
+			self.gpr.fit(X_core_plus, self.y_residual)
+			# print(self.y_residual.values[0])
 
 		return self
 
@@ -213,49 +228,55 @@ class LinearAndGaussianProcessRegression(
 
 	def cross_val_scores(self, X, y, cv=3, alt_y=None):
 
-		X_core_plus = self._feature_selection(X, y)
+		with ignore_warnings(DataConversionWarning):
+			y = _make_as_vector(y)
 
-		total = cross_val_score(self, X_core_plus, y, cv=cv)
+			X_core_plus = self._feature_selection(X, y)
 
-		linear_cv_score = cross_val_score(self.lr, X_core_plus, y, cv=cv)
-		linear_cv_predict = cross_val_predict(self.lr, X_core_plus, y, cv=cv)
-		linear_cv_residual = y-linear_cv_predict
-		gpr_cv_score = cross_val_score(self.gpr, X_core_plus, linear_cv_residual, cv=cv)
+			total = cross_val_score(self, X_core_plus, y, cv=cv)
 
-		self.lr.fit(X_core_plus, y)
-		y_residual = y - self.lr.predict(X_core_plus)
-		gpr_cv_score2 = cross_val_score(self.gpr, X_core_plus, y_residual, cv=cv)
+			linear_cv_score = cross_val_score(self.lr, X_core_plus, y, cv=cv)
+			linear_cv_predict = cross_val_predict(self.lr, X_core_plus, y, cv=cv)
+			linear_cv_residual = y-linear_cv_predict
+			gpr_cv_score = cross_val_score(self.gpr, X_core_plus, linear_cv_residual, cv=cv)
 
-		result = dicta(
-			total=total,
-			linear=linear_cv_score,
-			net_gpr=total-linear_cv_score,
-			gpr=gpr_cv_score,
-			gpr2=gpr_cv_score2,
-		)
-		if alt_y is not None:
-			result['gpr_alt'] = cross_val_score(self.gpr, X, alt_y, cv=cv)
-			# print()
-			# print(numpy.concatenate([y_residual, alt_y, y_residual-alt_y], axis=1 ))
-			# print()
-			# print(result['gpr_alt'])
-			# print(result['gpr2'])
-			# print()
+			self.lr.fit(X_core_plus, y)
+			y_residual = y - self.lr.predict(X_core_plus)
+			gpr_cv_score2 = cross_val_score(self.gpr, X_core_plus, y_residual, cv=cv)
+
+			result = dicta(
+				total=total,
+				linear=linear_cv_score,
+				net_gpr=total-linear_cv_score,
+				gpr=gpr_cv_score,
+				gpr2=gpr_cv_score2,
+			)
+			if alt_y is not None:
+				result['gpr_alt'] = cross_val_score(self.gpr, X, alt_y, cv=cv)
+				# print()
+				# print(numpy.concatenate([y_residual, alt_y, y_residual-alt_y], axis=1 ))
+				# print()
+				# print(result['gpr_alt'])
+				# print(result['gpr2'])
+				# print()
 		return result
 
 	def cross_val_predicts(self, X, y, cv=3):
 
-		X_core_plus = self._feature_selection(X, y)
+		with ignore_warnings(DataConversionWarning):
+			y = _make_as_vector(y)
 
-		total = cross_val_predict(self, X_core_plus, y, cv=cv)
-		linear_cv_predict = cross_val_predict(self.lr, X_core_plus, y, cv=cv)
-		linear_cv_residual = y-linear_cv_predict
-		gpr_cv_predict_over_cv_linear = cross_val_predict(self.gpr, X_core_plus, linear_cv_residual, cv=cv)
+			X_core_plus = self._feature_selection(X, y)
 
-		self.lr.fit(X_core_plus, y)
-		linear_full_predict = self.lr.predict(X_core_plus)
-		y_residual = y - linear_full_predict
-		gpr_cv_predict_over_full_linear = cross_val_predict(self.gpr, X_core_plus, y_residual, cv=cv)
+			total = cross_val_predict(self, X_core_plus, y, cv=cv)
+			linear_cv_predict = cross_val_predict(self.lr, X_core_plus, y, cv=cv)
+			linear_cv_residual = y-linear_cv_predict
+			gpr_cv_predict_over_cv_linear = cross_val_predict(self.gpr, X_core_plus, linear_cv_residual, cv=cv)
+
+			self.lr.fit(X_core_plus, y)
+			linear_full_predict = self.lr.predict(X_core_plus)
+			y_residual = y - linear_full_predict
+			gpr_cv_predict_over_full_linear = cross_val_predict(self.gpr, X_core_plus, y_residual, cv=cv)
 
 		return dicta(
 			total=total,
@@ -269,6 +290,8 @@ class LinearAndGaussianProcessRegression(
 
 def cross_val_scores(pipe, X, y, cv=3):
 	# For pipelines
+
+	y = _make_as_vector(y)
 
 	self = pipe.steps[-1][1]
 
