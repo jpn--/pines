@@ -7,6 +7,12 @@ from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C, RationalQ
 from sklearn.base import RegressorMixin, BaseEstimator
 from sklearn.model_selection import cross_val_score, cross_val_predict
 from sklearn.preprocessing import StandardScaler
+
+from sklearn.feature_selection import SelectKBest
+from sklearn.feature_selection import f_regression, mutual_info_regression
+
+from sklearn.exceptions import DataConversionWarning
+
 import numpy, pandas
 import scipy.stats
 import warnings
@@ -71,13 +77,57 @@ class LinearAndGaussianProcessRegression(
 		RegressorMixin,
 ):
 
-	def __init__(self, lr_subset=None):
-		self.lr_subset = lr_subset
+	def __init__(self, core_features=None, keep_other_features=3,):
+		"""
+
+		Parameters
+		----------
+		core_features
+			feature columns to definitely keep for both LR and GPR
+
+		"""
+
+		self.core_features = core_features
+		self.keep_other_features = keep_other_features
 		self.lr = LinearRegression()
 		self.gpr = GaussianProcessRegressor_(n_restarts_optimizer=9)
 		self.y_residual = None
 		self.kernel_generator = lambda dims: C() * RBF([1.0] * dims)
 
+
+	def _feature_selection(self, X, y=None):
+
+		if not isinstance(X, pandas.DataFrame):
+			raise TypeError('must use pandas.DataFrame for X')
+
+		if self.core_features is None:
+			return X
+
+		X_core = X.loc[:,self.core_features]
+		X_other = X.loc[:, X.columns.difference(self.core_features)]
+		if X_other.shape[1] <= self.keep_other_features:
+			return X
+
+		if y is not None:
+			self.feature_selector = SelectKBest(mutual_info_regression, k=self.keep_other_features).fit(X_other, y)
+			print("keeping:",X_other.columns[self.feature_selector.get_support()])
+
+		X_other = pandas.DataFrame(
+			self.feature_selector.transform(X_other),
+			columns=X_other.columns[self.feature_selector.get_support()],
+			index=X_other.index,
+		)
+
+		try:
+			return pandas.concat([X_core, X_other], axis=1)
+		except:
+			print("X_core")
+			print(X_core)
+			print("X_other")
+			print(X_other)
+			print(X_core.info())
+			print(X_other.info())
+			raise
 
 	def fit(self, X, y):
 		"""
@@ -96,20 +146,34 @@ class LinearAndGaussianProcessRegression(
 		"""
 		# print("META FIT on",len(X))
 
-		if isinstance(X, pandas.DataFrame):
-			X = X.values
+		# if not isinstance(X, pandas.DataFrame):
+		# 	# X = pandas.DataFrame(X)
+		# 	raise TypeError('must use pandas.DataFrame for X')
+		#
+		# if self.core_features is None:
+		# 	X_core = X
+		# 	X_other = X.loc[:,[]]
+		# else:
+		# 	X_core = X.loc[:,self.core_features]
+		# 	X_other = X.loc[:, X.columns.difference(self.core_features)]
+		#
+		# self.feature_selector = SelectKBest(mutual_info_regression, k=self.keep_other_features).fit(X_other, y)
+		#
+		# X_other = self.feature_selector.transform(X_other)
 
-		if self.lr_subset is not None:
-			X_lr = X[:,self.lr_subset]
-		else:
-			X_lr = X
+		X_core_plus = self._feature_selection(X, y)
 
-		self.lr.fit(X_lr, y)
-		self.y_residual = y - self.lr.predict(X_lr)
-		dims = X.shape[1]
+		try:
+			self.lr.fit(X_core_plus, y)
+		except:
+			print(X_core_plus)
+			raise
+		self.y_residual = y - self.lr.predict(X_core_plus)
+		dims = X_core_plus.shape[1]
 		self.gpr.kernel = self.kernel_generator(dims)
-		self.gpr.fit(X, self.y_residual)
+		self.gpr.fit(X_core_plus, self.y_residual)
 		# print(self.y_residual.values[0])
+
 		return self
 
 
@@ -127,37 +191,40 @@ class LinearAndGaussianProcessRegression(
 			Returns predicted values.
 		"""
 
-		if isinstance(X, pandas.DataFrame):
-			X = X.values
+		# if not isinstance(X, pandas.DataFrame):
+		# 	# X = pandas.DataFrame(X)
+		# 	raise TypeError('must use pandas.DataFrame for X')
+		#
+		# if self.core_features is None:
+		# 	X_core = X
+		# 	X_other = X.loc[:,[]]
+		# else:
+		# 	X_core = X.loc[:,self.core_features]
+		# 	X_other = X.loc[:, X.columns.difference(self.core_features)]
+		#
+		# X_other = self.feature_selector.transform(X_other)
+		#
+		# X_core_plus = pandas.concat([X_core, X_other], axis=1)
+		X_core_plus = self._feature_selection(X)
 
-		if self.lr_subset is not None:
-			X_lr = X[:,self.lr_subset]
-		else:
-			X_lr = X
-
-		y_hat_lr = self.lr.predict(X=X_lr)
-		y_hat_gpr = self.gpr.predict(X)
+		y_hat_lr = self.lr.predict(X=X_core_plus)
+		y_hat_gpr = self.gpr.predict(X_core_plus)
 		return y_hat_lr + y_hat_gpr
 
 	def cross_val_scores(self, X, y, cv=3, alt_y=None):
 
-		if isinstance(X, pandas.DataFrame):
-			X = X.values
+		X_core_plus = self._feature_selection(X, y)
 
-		if self.lr_subset is not None:
-			X_lr = X[:,self.lr_subset]
-		else:
-			X_lr = X
+		total = cross_val_score(self, X_core_plus, y, cv=cv)
 
-		total = cross_val_score(self, X, y, cv=cv)
-		linear_cv_score = cross_val_score(self.lr, X_lr, y, cv=cv)
-		linear_cv_predict = cross_val_predict(self.lr, X_lr, y, cv=cv)
+		linear_cv_score = cross_val_score(self.lr, X_core_plus, y, cv=cv)
+		linear_cv_predict = cross_val_predict(self.lr, X_core_plus, y, cv=cv)
 		linear_cv_residual = y-linear_cv_predict
-		gpr_cv_score = cross_val_score(self.gpr, X, linear_cv_residual, cv=cv)
+		gpr_cv_score = cross_val_score(self.gpr, X_core_plus, linear_cv_residual, cv=cv)
 
-		self.lr.fit(X_lr, y)
-		y_residual = y - self.lr.predict(X_lr)
-		gpr_cv_score2 = cross_val_score(self.gpr, X, y_residual, cv=cv)
+		self.lr.fit(X_core_plus, y)
+		y_residual = y - self.lr.predict(X_core_plus)
+		gpr_cv_score2 = cross_val_score(self.gpr, X_core_plus, y_residual, cv=cv)
 
 		result = dicta(
 			total=total,
@@ -178,23 +245,17 @@ class LinearAndGaussianProcessRegression(
 
 	def cross_val_predicts(self, X, y, cv=3):
 
-		if isinstance(X, pandas.DataFrame):
-			X = X.values
+		X_core_plus = self._feature_selection(X, y)
 
-		if self.lr_subset is not None:
-			X_lr = X[:,self.lr_subset]
-		else:
-			X_lr = X
-
-		total = cross_val_predict(self, X, y, cv=cv)
-		linear_cv_predict = cross_val_predict(self.lr, X_lr, y, cv=cv)
+		total = cross_val_predict(self, X_core_plus, y, cv=cv)
+		linear_cv_predict = cross_val_predict(self.lr, X_core_plus, y, cv=cv)
 		linear_cv_residual = y-linear_cv_predict
-		gpr_cv_predict_over_cv_linear = cross_val_predict(self.gpr, X, linear_cv_residual, cv=cv)
+		gpr_cv_predict_over_cv_linear = cross_val_predict(self.gpr, X_core_plus, linear_cv_residual, cv=cv)
 
-		self.lr.fit(X_lr, y)
-		linear_full_predict = self.lr.predict(X_lr)
+		self.lr.fit(X_core_plus, y)
+		linear_full_predict = self.lr.predict(X_core_plus)
 		y_residual = y - linear_full_predict
-		gpr_cv_predict_over_full_linear = cross_val_predict(self.gpr, X, y_residual, cv=cv)
+		gpr_cv_predict_over_full_linear = cross_val_predict(self.gpr, X_core_plus, y_residual, cv=cv)
 
 		return dicta(
 			total=total,
