@@ -7,6 +7,7 @@ from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C, RationalQ
 from sklearn.base import RegressorMixin, BaseEstimator
 from sklearn.model_selection import cross_val_score, cross_val_predict
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import r2_score
 
 from sklearn.feature_selection import SelectKBest
 from sklearn.feature_selection import f_regression, mutual_info_regression
@@ -30,17 +31,25 @@ class LinearRegression(_sklearn_LinearRegression):
 		if isinstance(X, pandas.DataFrame):
 			self.names_ = X.columns.copy()
 
-		sse = numpy.sum(
-			(self.predict(X) - y) ** 2, axis=0) / float(X.shape[0] - X.shape[1])
+		sse = numpy.sum((self.predict(X) - y) ** 2, axis=0) / float(X.shape[0] - X.shape[1])
+
+		if sse.shape == ():
+			sse = sse.reshape(1,)
 
 		inv_X_XT = numpy.linalg.inv(numpy.dot(X.T, X))
 
 		with warnings.catch_warnings():
 			warnings.simplefilter("ignore", category=RuntimeWarning)
-			se = numpy.array([
-				numpy.sqrt(numpy.diagonal(sse[i] * inv_X_XT))
-				for i in range(sse.shape[0])
-			])
+
+			try:
+				se = numpy.array([
+					numpy.sqrt(numpy.diagonal(sse[i] * inv_X_XT))
+					for i in range(sse.shape[0])
+				])
+			except:
+				print("sse.shape",sse.shape)
+				print(sse)
+				raise
 
 			self.t_ = self.coef_ / se
 			self.p_ = 2 * (1 - scipy.stats.t.cdf(numpy.abs(self.t_), y.shape[0] - X.shape[1]))
@@ -107,6 +116,20 @@ class LinearAndGaussianProcessRegression(
 
 
 	def _feature_selection(self, X, y=None):
+		"""
+
+		Parameters
+		----------
+		X : pandas.DataFrame
+		y : ndarray
+			If given, the SelectKBest feature selector will be re-fit to find the best features. If not given,
+			then the previously fit SelectKBest will be used; if it has never been fit, an error is raised.
+
+		Returns
+		-------
+		pandas.DataFrame
+			Contains all the core features plus the K best other features.
+		"""
 
 		if not isinstance(X, pandas.DataFrame):
 			raise TypeError('must use pandas.DataFrame for X')
@@ -119,6 +142,10 @@ class LinearAndGaussianProcessRegression(
 		X_other = X.loc[:, X.columns.difference(self.core_features)]
 		if X_other.shape[1] <= self.keep_other_features:
 			return X
+
+		# If self.keep_other_features is zero, there is no feature selecting to do and we return only the core.
+		if self.keep_other_features == 0:
+			return X_core
 
 		if y is not None:
 			self.feature_selector = SelectKBest(mutual_info_regression, k=self.keep_other_features).fit(X_other, y)
@@ -181,7 +208,10 @@ class LinearAndGaussianProcessRegression(
 			try:
 				self.lr.fit(X_core_plus, y)
 			except:
+				print("X_core_plus.shape",X_core_plus.shape)
+				print("y.shape",y.shape)
 				print(X_core_plus)
+				print(y)
 				raise
 			self.y_residual = y - self.lr.predict(X_core_plus)
 			dims = X_core_plus.shape[1]
@@ -192,7 +222,7 @@ class LinearAndGaussianProcessRegression(
 		return self
 
 
-	def predict(self, X):
+	def predict(self, X, return_std=False, return_cov=False):
 		"""Predict using the model
 
 		Parameters
@@ -223,8 +253,12 @@ class LinearAndGaussianProcessRegression(
 		X_core_plus = self._feature_selection(X)
 
 		y_hat_lr = self.lr.predict(X=X_core_plus)
-		y_hat_gpr = self.gpr.predict(X_core_plus)
-		return y_hat_lr + y_hat_gpr
+		if return_std:
+			y_hat_gpr, y_hat_std = self.gpr.predict(X_core_plus, return_std=True)
+			return y_hat_lr + y_hat_gpr, y_hat_std
+		else:
+			y_hat_gpr = self.gpr.predict(X_core_plus)
+			return y_hat_lr + y_hat_gpr
 
 	def cross_val_scores(self, X, y, cv=3, alt_y=None):
 
@@ -336,6 +370,16 @@ class PartialStandardScaler(StandardScaler):
 				self.scale_[k] = 1
 		return result
 
+	def transform(self, X, y='deprecated', copy=None):
+		result = super().transform(X, y, copy)
+		if isinstance(X, pandas.DataFrame):
+			return pandas.DataFrame(
+				data=result,
+				index=X.index,
+				columns=[(f'{i}†' if i not in self._omit else i) for i in X.columns]
+			)
+		return result
+
 	def inverse_transform_by_name(self, X, name):
 		ix = self._names.get_loc(name)
 		if self.with_std:
@@ -351,6 +395,36 @@ class PartialStandardScaler(StandardScaler):
 		if self.with_std:
 			X /= self.scale_[ix]
 		return X
+
+class Log1pStandardScaler(StandardScaler):
+
+	def __init__(self, copy=True, with_mean=True, with_std=True):
+		super().__init__(copy=copy, with_mean=with_mean, with_std=with_std)
+
+	def fit(self, X, y=None):
+		return super().fit(numpy.log1p(X), y)
+
+	def transform(self, X, y='deprecated', copy=None):
+		result = super().transform(numpy.log1p(X), y, copy)
+		if isinstance(X, pandas.DataFrame):
+			return pandas.DataFrame(
+				data=result,
+				index=X.index,
+				columns=[f'{i}†' for i in X.columns]
+			)
+		return result
+
+	def inverse_transform(self, X, copy=None):
+		result = super().inverse_transform(X)
+		result = numpy.expm1(result)
+		if isinstance(X, pandas.DataFrame):
+			return pandas.DataFrame(
+				data=result,
+				index=X.index,
+				columns=[i.rstrip('†') for i in X.columns]
+			)
+		return result
+
 
 class ExponentialFeatures(BaseEstimator, TransformerMixin):
 
@@ -506,3 +580,158 @@ class InteractionFeatures(BaseEstimator, TransformerMixin):
 
 		return XP[:,XP_use]
 
+
+
+class LinearAndGaussianProcessMultiRegression(
+		BaseEstimator,
+		RegressorMixin,
+):
+
+	def __init__(self, keep_other_features=3, replication=100):
+		"""
+
+		Parameters
+		----------
+		core_features
+			feature columns to definitely keep for both LR and GPR
+
+		"""
+
+		self.core_features = None
+		self.keep_other_features = keep_other_features
+		self.step1 = LinearAndGaussianProcessRegression()
+		self.gpr = GaussianProcessRegressor_(n_restarts_optimizer=9)
+		self.y_residual = None
+		self.kernel_generator = lambda dims: C() * RBF([1.0] * dims)
+
+	def fit(self, X, Y):
+		"""
+		Fit linear and gaussian model.
+
+		Parameters
+		----------
+		X : numpy array or sparse matrix of shape [n_samples, n_features]
+			Training data
+		y : numpy array of shape [n_samples, n_targets]
+			Target values.
+
+		Returns
+		-------
+		self : returns an instance of self.
+		"""
+		if not isinstance(X, pandas.DataFrame):
+			raise TypeError('must use pandas.DataFrame for X')
+
+		if not isinstance(Y, pandas.DataFrame):
+			raise TypeError('must use pandas.DataFrame for Y')
+
+
+		with ignore_warnings(DataConversionWarning):
+
+			self.steps = [
+				LinearAndGaussianProcessRegression(
+					core_features=X.columns,
+					keep_other_features=self.keep_other_features,
+				).fit(
+					pandas.concat([X, Y.iloc[:,:n]], axis=1),
+					Y[col]
+				)
+				for n,col in enumerate(Y.columns)
+			]
+
+			self.Y_columns = Y.columns
+
+		return self
+
+	def predict(self, X, return_std=False, return_cov=False):
+		"""Predict using the model
+
+		Parameters
+		----------
+		X : {array-like, sparse matrix}, shape = (n_samples, n_features)
+			Samples.
+
+		Returns
+		-------
+		C : array, shape = (n_samples,)
+			Returns predicted values.
+		"""
+
+		if not isinstance(X, pandas.DataFrame):
+			raise TypeError('must use pandas.DataFrame for X')
+
+		Yhat = pandas.DataFrame(
+			index=X.index,
+			columns=self.Y_columns,
+		)
+
+		if return_std:
+			Ystd = pandas.DataFrame(
+				index=X.index,
+				columns=self.Y_columns,
+			)
+			for n, col in enumerate(self.Y_columns):
+				y1, y2 = self.steps[n].predict(
+					pandas.concat([X, Yhat.iloc[:, :n]], axis=1),
+					return_std=True
+				)
+				Yhat.iloc[:, n] = y1
+				Ystd.iloc[:, n] = y2
+			return Yhat, Ystd
+
+		else:
+			for n, col in enumerate(self.Y_columns):
+				y1 = self.steps[n].predict(
+					pandas.concat([X, Yhat.iloc[:, :n]], axis=1),
+				)
+				Yhat.iloc[:, n] = y1
+			return Yhat
+
+
+	def cross_val_score(self, X, Y, cv=3):
+		p = self.cross_val_predicts(X, Y, cv=cv)
+		return pandas.Series(
+			r2_score(Y, p, sample_weight=None, multioutput='raw_values'),
+			index=Y.columns
+		)
+
+	def cross_val_predicts(self, X, Y, cv=3, alt_y=None):
+		if not isinstance(X, pandas.DataFrame):
+			raise TypeError('must use pandas.DataFrame for X')
+		if not isinstance(Y, pandas.DataFrame):
+			raise TypeError('must use pandas.DataFrame for Y')
+		with ignore_warnings(DataConversionWarning):
+			p = cross_val_predict(self, X, Y, cv=cv)
+		return pandas.DataFrame(p, columns=Y.columns, index=Y.index)
+
+
+	def score(self, X, y, sample_weight=None):
+		"""Returns the coefficient of determination R^2 of the prediction.
+
+		The coefficient R^2 is defined as (1 - u/v), where u is the residual
+		sum of squares ((y_true - y_pred) ** 2).sum() and v is the total
+		sum of squares ((y_true - y_true.mean()) ** 2).sum().
+		The best possible score is 1.0 and it can be negative (because the
+		model can be arbitrarily worse). A constant model that always
+		predicts the expected value of y, disregarding the input features,
+		would get a R^2 score of 0.0.
+
+		Parameters
+		----------
+		X : array-like, shape = (n_samples, n_features)
+			Test samples.
+
+		y : array-like, shape = (n_samples) or (n_samples, n_outputs)
+			True values for X.
+
+		sample_weight : array-like, shape = [n_samples], optional
+			Sample weights.
+
+		Returns
+		-------
+		score : float
+			R^2 of self.predict(X) wrt. y.
+		"""
+
+		return r2_score(y, self.predict(X), sample_weight=sample_weight,
+						multioutput='raw_values').mean()

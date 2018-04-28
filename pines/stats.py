@@ -2,7 +2,7 @@
 import scipy.stats
 import numpy
 
-def beta_pert( x_min, x_mode, x_max,  lamb= 4 ):
+def beta_pert( x_min, x_mode, x_max,  lamb= 4, mode_as_fraction=None ):
 	"""
 	Beta-PERT
 
@@ -15,11 +15,16 @@ def beta_pert( x_min, x_mode, x_max,  lamb= 4 ):
 		The min, mode, and max for the beta-pert distribution
 	lamb : float
 		The pert shape modifier
+	mode_as_fraction : float, optional
+		The mode is replaced with the fraction of the distance from the min to the max.
 
 	Returns
 	-------
 	rv_frozen
 	"""
+
+	if mode_as_fraction is not None:
+		x_mode = x_min + mode_as_fraction*(x_max-x_min)
 
 	if ( x_min > x_max or x_mode > x_max or x_mode < x_min ):
 		raise ValueError( "invalid parameters" )
@@ -41,7 +46,9 @@ def beta_pert( x_min, x_mode, x_max,  lamb= 4 ):
 	return scipy.stats.beta( v, w, loc=x_min, scale=x_range )
 
 
-def triangular( x_min, x_mode, x_max ):
+def triangular( x_min, x_mode, x_max, mode_as_fraction=None ):
+	if mode_as_fraction is not None:
+		x_mode = x_min + mode_as_fraction*(x_max-x_min)
 	if ( x_min > x_max or x_mode > x_max or x_mode < x_min ):
 		raise ValueError( "invalid parameters" )
 	scale = x_max - x_min
@@ -57,6 +64,12 @@ def uniform( x_min, x_max ):
 		raise ValueError( "invalid parameters" )
 	scale = x_max - x_min
 	return scipy.stats.uniform( loc=x_min, scale=scale )
+
+def binary( p ):
+	if (p < 0) or (p > 1):
+		raise ValueError( "invalid parameters" )
+	return scipy.stats.binom( n=1, p=p )
+
 
 def _mod_linspace(start, stop, num=50, dtype=None):
 	y, step = numpy.linspace(start, stop, num=num, endpoint=False, retstep=True, dtype=dtype)
