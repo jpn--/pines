@@ -3,6 +3,7 @@
 python setup.py bdist_wheel upload
 
 git push
+git push --tags
 
 conda build ./conda --output-folder conda_builds/ -c jpn
 

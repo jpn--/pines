@@ -19,7 +19,7 @@ import scipy.stats
 import warnings
 import contextlib
 
-from .attribute_dict import dicta
+from pines.attribute_dict import dicta
 
 
 class LinearRegression(_sklearn_LinearRegression):
@@ -97,7 +97,7 @@ class LinearAndGaussianProcessRegression(
 		RegressorMixin,
 ):
 
-	def __init__(self, core_features=None, keep_other_features=3,):
+	def __init__(self, core_features=None, keep_other_features=3, use_linear=True):
 		"""
 
 		Parameters
@@ -113,6 +113,7 @@ class LinearAndGaussianProcessRegression(
 		self.gpr = GaussianProcessRegressor_(n_restarts_optimizer=9)
 		self.y_residual = None
 		self.kernel_generator = lambda dims: C() * RBF([1.0] * dims)
+		self.use_linear = use_linear
 
 
 	def _feature_selection(self, X, y=None):
@@ -150,11 +151,18 @@ class LinearAndGaussianProcessRegression(
 		if y is not None:
 			self.feature_selector = SelectKBest(mutual_info_regression, k=self.keep_other_features).fit(X_other, y)
 
-		X_other = pandas.DataFrame(
-			self.feature_selector.transform(X_other),
-			columns=X_other.columns[self.feature_selector.get_support()],
-			index=X_other.index,
-		)
+		try:
+			X_other = pandas.DataFrame(
+				self.feature_selector.transform(X_other),
+				columns=X_other.columns[self.feature_selector.get_support()],
+				index=X_other.index,
+			)
+		except:
+			print("X_other.info")
+			print(X_other.info(1))
+			print("X_other")
+			print(X_other)
+			raise
 
 		try:
 			return pandas.concat([X_core, X_other], axis=1)
@@ -202,18 +210,28 @@ class LinearAndGaussianProcessRegression(
 
 		with ignore_warnings(DataConversionWarning):
 
+			if isinstance(y, pandas.DataFrame):
+				self.Y_columns = y.columns
+			elif isinstance(y, pandas.Series):
+				self.Y_columns = [y.name]
+			else:
+				self.Y_columns = None
+
 			y = _make_as_vector(y)
 			X_core_plus = self._feature_selection(X, y)
 
-			try:
-				self.lr.fit(X_core_plus, y)
-			except:
-				print("X_core_plus.shape",X_core_plus.shape)
-				print("y.shape",y.shape)
-				print(X_core_plus)
-				print(y)
-				raise
-			self.y_residual = y - self.lr.predict(X_core_plus)
+			if self.use_linear:
+				try:
+					self.lr.fit(X_core_plus, y)
+				except:
+					print("X_core_plus.shape",X_core_plus.shape)
+					print("y.shape",y.shape)
+					print(X_core_plus)
+					print(y)
+					raise
+				self.y_residual = y - self.lr.predict(X_core_plus)
+			else:
+				self.y_residual = y
 			dims = X_core_plus.shape[1]
 			self.gpr.kernel = self.kernel_generator(dims)
 			self.gpr.fit(X_core_plus, self.y_residual)
@@ -236,31 +254,57 @@ class LinearAndGaussianProcessRegression(
 			Returns predicted values.
 		"""
 
-		# if not isinstance(X, pandas.DataFrame):
-		# 	# X = pandas.DataFrame(X)
-		# 	raise TypeError('must use pandas.DataFrame for X')
-		#
-		# if self.core_features is None:
-		# 	X_core = X
-		# 	X_other = X.loc[:,[]]
-		# else:
-		# 	X_core = X.loc[:,self.core_features]
-		# 	X_other = X.loc[:, X.columns.difference(self.core_features)]
-		#
-		# X_other = self.feature_selector.transform(X_other)
-		#
-		# X_core_plus = pandas.concat([X_core, X_other], axis=1)
+		if not isinstance(X, pandas.DataFrame):
+			raise TypeError('must use pandas.DataFrame for X')
 		X_core_plus = self._feature_selection(X)
 
-		y_hat_lr = self.lr.predict(X=X_core_plus)
+		if self.use_linear:
+			y_hat_lr = self.lr.predict(X=X_core_plus)
+		else:
+			y_hat_lr = 0
+
 		if return_std:
 			y_hat_gpr, y_hat_std = self.gpr.predict(X_core_plus, return_std=True)
-			return y_hat_lr + y_hat_gpr, y_hat_std
+
+			if self.Y_columns is not None:
+				y_result = pandas.DataFrame(
+					y_hat_lr + y_hat_gpr,
+					columns=self.Y_columns,
+					index=X.index,
+				)
+			else:
+				y_result = y_hat_lr + y_hat_gpr
+
+			return y_result, y_hat_std
 		else:
 			y_hat_gpr = self.gpr.predict(X_core_plus)
-			return y_hat_lr + y_hat_gpr
 
-	def cross_val_scores(self, X, y, cv=3, alt_y=None):
+			if self.Y_columns is not None:
+				y_result = pandas.DataFrame(
+					y_hat_lr + y_hat_gpr,
+					columns=self.Y_columns,
+					index=X.index,
+				)
+			else:
+				y_result = y_hat_lr + y_hat_gpr
+
+			return y_result
+
+	def cross_val_scores(self, X, Y, cv=3):
+		p = self.cross_val_predict(X, Y, cv=cv)
+		return pandas.Series(
+			r2_score(Y, p, sample_weight=None, multioutput='raw_values'),
+			index=Y.columns
+		)
+	#
+	# def cross_val_scores(self, X, y, cv=3):
+	# 	with ignore_warnings(DataConversionWarning):
+	# 		y = _make_as_vector(y)
+	# 		X_core_plus = self._feature_selection(X, y)
+	# 		total = cross_val_score(self, X_core_plus, y, cv=cv)
+	# 	return total
+
+	def cross_val_scores_full(self, X, y, cv=3, alt_y=None):
 
 		with ignore_warnings(DataConversionWarning):
 			y = _make_as_vector(y)
@@ -269,22 +313,28 @@ class LinearAndGaussianProcessRegression(
 
 			total = cross_val_score(self, X_core_plus, y, cv=cv)
 
-			linear_cv_score = cross_val_score(self.lr, X_core_plus, y, cv=cv)
-			linear_cv_predict = cross_val_predict(self.lr, X_core_plus, y, cv=cv)
-			linear_cv_residual = y-linear_cv_predict
-			gpr_cv_score = cross_val_score(self.gpr, X_core_plus, linear_cv_residual, cv=cv)
+			if self.use_linear:
+				linear_cv_score = cross_val_score(self.lr, X_core_plus, y, cv=cv)
+				linear_cv_predict = cross_val_predict(self.lr, X_core_plus, y, cv=cv)
+				linear_cv_residual = y-linear_cv_predict
+				gpr_cv_score = cross_val_score(self.gpr, X_core_plus, linear_cv_residual, cv=cv)
 
-			self.lr.fit(X_core_plus, y)
-			y_residual = y - self.lr.predict(X_core_plus)
-			gpr_cv_score2 = cross_val_score(self.gpr, X_core_plus, y_residual, cv=cv)
+				self.lr.fit(X_core_plus, y)
+				y_residual = y - self.lr.predict(X_core_plus)
+				gpr_cv_score2 = cross_val_score(self.gpr, X_core_plus, y_residual, cv=cv)
 
-			result = dicta(
-				total=total,
-				linear=linear_cv_score,
-				net_gpr=total-linear_cv_score,
-				gpr=gpr_cv_score,
-				gpr2=gpr_cv_score2,
-			)
+				result = dicta(
+					total=total,
+					linear=linear_cv_score,
+					net_gpr=total-linear_cv_score,
+					gpr=gpr_cv_score,
+					gpr2=gpr_cv_score2,
+				)
+			else:
+				result = dicta(
+					total=total,
+				)
+
 			if alt_y is not None:
 				result['gpr_alt'] = cross_val_score(self.gpr, X, alt_y, cv=cv)
 				# print()
@@ -295,6 +345,26 @@ class LinearAndGaussianProcessRegression(
 				# print()
 		return result
 
+	def cross_val_predict(self, X, y, cv=3):
+
+		with ignore_warnings(DataConversionWarning):
+
+			X_core_plus = self._feature_selection(X, y)
+
+			if isinstance(y, pandas.DataFrame):
+				y_columns = y.columns
+			elif isinstance(y, pandas.Series):
+				y_columns = [y.name]
+			else:
+				y_columns = ['Unnamed']
+
+			total = cross_val_predict(self, X_core_plus, y, cv=cv)
+			return pandas.DataFrame(
+				total,
+				index=y.index,
+				columns=y_columns,
+			)
+
 	def cross_val_predicts(self, X, y, cv=3):
 
 		with ignore_warnings(DataConversionWarning):
@@ -303,22 +373,28 @@ class LinearAndGaussianProcessRegression(
 			X_core_plus = self._feature_selection(X, y)
 
 			total = cross_val_predict(self, X_core_plus, y, cv=cv)
-			linear_cv_predict = cross_val_predict(self.lr, X_core_plus, y, cv=cv)
-			linear_cv_residual = y-linear_cv_predict
-			gpr_cv_predict_over_cv_linear = cross_val_predict(self.gpr, X_core_plus, linear_cv_residual, cv=cv)
+			if self.use_linear:
+				linear_cv_predict = cross_val_predict(self.lr, X_core_plus, y, cv=cv)
+				linear_cv_residual = y-linear_cv_predict
+				gpr_cv_predict_over_cv_linear = cross_val_predict(self.gpr, X_core_plus, linear_cv_residual, cv=cv)
 
-			self.lr.fit(X_core_plus, y)
-			linear_full_predict = self.lr.predict(X_core_plus)
-			y_residual = y - linear_full_predict
-			gpr_cv_predict_over_full_linear = cross_val_predict(self.gpr, X_core_plus, y_residual, cv=cv)
+				self.lr.fit(X_core_plus, y)
+				linear_full_predict = self.lr.predict(X_core_plus)
+				y_residual = y - linear_full_predict
+				gpr_cv_predict_over_full_linear = cross_val_predict(self.gpr, X_core_plus, y_residual, cv=cv)
 
-		return dicta(
-			total=total,
-			linear=linear_cv_predict,
-			net_gpr=total-linear_cv_predict,
-			gpr=gpr_cv_predict_over_cv_linear+linear_cv_predict,
-			gpr2=gpr_cv_predict_over_full_linear+linear_full_predict,
-		)
+				return dicta(
+					total=total,
+					linear=linear_cv_predict,
+					net_gpr=total-linear_cv_predict,
+					gpr=gpr_cv_predict_over_cv_linear+linear_cv_predict,
+					gpr2=gpr_cv_predict_over_full_linear+linear_full_predict,
+				)
+			else:
+				return dicta(
+					total=total,
+				)
+
 
 
 
@@ -581,157 +657,3 @@ class InteractionFeatures(BaseEstimator, TransformerMixin):
 		return XP[:,XP_use]
 
 
-
-class LinearAndGaussianProcessMultiRegression(
-		BaseEstimator,
-		RegressorMixin,
-):
-
-	def __init__(self, keep_other_features=3, replication=100):
-		"""
-
-		Parameters
-		----------
-		core_features
-			feature columns to definitely keep for both LR and GPR
-
-		"""
-
-		self.core_features = None
-		self.keep_other_features = keep_other_features
-		self.step1 = LinearAndGaussianProcessRegression()
-		self.gpr = GaussianProcessRegressor_(n_restarts_optimizer=9)
-		self.y_residual = None
-		self.kernel_generator = lambda dims: C() * RBF([1.0] * dims)
-
-	def fit(self, X, Y):
-		"""
-		Fit linear and gaussian model.
-
-		Parameters
-		----------
-		X : numpy array or sparse matrix of shape [n_samples, n_features]
-			Training data
-		y : numpy array of shape [n_samples, n_targets]
-			Target values.
-
-		Returns
-		-------
-		self : returns an instance of self.
-		"""
-		if not isinstance(X, pandas.DataFrame):
-			raise TypeError('must use pandas.DataFrame for X')
-
-		if not isinstance(Y, pandas.DataFrame):
-			raise TypeError('must use pandas.DataFrame for Y')
-
-
-		with ignore_warnings(DataConversionWarning):
-
-			self.steps = [
-				LinearAndGaussianProcessRegression(
-					core_features=X.columns,
-					keep_other_features=self.keep_other_features,
-				).fit(
-					pandas.concat([X, Y.iloc[:,:n]], axis=1),
-					Y[col]
-				)
-				for n,col in enumerate(Y.columns)
-			]
-
-			self.Y_columns = Y.columns
-
-		return self
-
-	def predict(self, X, return_std=False, return_cov=False):
-		"""Predict using the model
-
-		Parameters
-		----------
-		X : {array-like, sparse matrix}, shape = (n_samples, n_features)
-			Samples.
-
-		Returns
-		-------
-		C : array, shape = (n_samples,)
-			Returns predicted values.
-		"""
-
-		if not isinstance(X, pandas.DataFrame):
-			raise TypeError('must use pandas.DataFrame for X')
-
-		Yhat = pandas.DataFrame(
-			index=X.index,
-			columns=self.Y_columns,
-		)
-
-		if return_std:
-			Ystd = pandas.DataFrame(
-				index=X.index,
-				columns=self.Y_columns,
-			)
-			for n, col in enumerate(self.Y_columns):
-				y1, y2 = self.steps[n].predict(
-					pandas.concat([X, Yhat.iloc[:, :n]], axis=1),
-					return_std=True
-				)
-				Yhat.iloc[:, n] = y1
-				Ystd.iloc[:, n] = y2
-			return Yhat, Ystd
-
-		else:
-			for n, col in enumerate(self.Y_columns):
-				y1 = self.steps[n].predict(
-					pandas.concat([X, Yhat.iloc[:, :n]], axis=1),
-				)
-				Yhat.iloc[:, n] = y1
-			return Yhat
-
-
-	def cross_val_score(self, X, Y, cv=3):
-		p = self.cross_val_predicts(X, Y, cv=cv)
-		return pandas.Series(
-			r2_score(Y, p, sample_weight=None, multioutput='raw_values'),
-			index=Y.columns
-		)
-
-	def cross_val_predicts(self, X, Y, cv=3, alt_y=None):
-		if not isinstance(X, pandas.DataFrame):
-			raise TypeError('must use pandas.DataFrame for X')
-		if not isinstance(Y, pandas.DataFrame):
-			raise TypeError('must use pandas.DataFrame for Y')
-		with ignore_warnings(DataConversionWarning):
-			p = cross_val_predict(self, X, Y, cv=cv)
-		return pandas.DataFrame(p, columns=Y.columns, index=Y.index)
-
-
-	def score(self, X, y, sample_weight=None):
-		"""Returns the coefficient of determination R^2 of the prediction.
-
-		The coefficient R^2 is defined as (1 - u/v), where u is the residual
-		sum of squares ((y_true - y_pred) ** 2).sum() and v is the total
-		sum of squares ((y_true - y_true.mean()) ** 2).sum().
-		The best possible score is 1.0 and it can be negative (because the
-		model can be arbitrarily worse). A constant model that always
-		predicts the expected value of y, disregarding the input features,
-		would get a R^2 score of 0.0.
-
-		Parameters
-		----------
-		X : array-like, shape = (n_samples, n_features)
-			Test samples.
-
-		y : array-like, shape = (n_samples) or (n_samples, n_outputs)
-			True values for X.
-
-		sample_weight : array-like, shape = [n_samples], optional
-			Sample weights.
-
-		Returns
-		-------
-		score : float
-			R^2 of self.predict(X) wrt. y.
-		"""
-
-		return r2_score(y, self.predict(X), sample_weight=sample_weight,
-						multioutput='raw_values').mean()
