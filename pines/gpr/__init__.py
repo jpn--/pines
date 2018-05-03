@@ -22,6 +22,21 @@ import contextlib
 from pines.attribute_dict import dicta
 
 
+
+
+def feature_concat(*args):
+	if all(isinstance(a, pandas.DataFrame) for a in args):
+		return pandas.concat(args, axis=1)
+	if any(isinstance(a, pandas.DataFrame) for a in args):
+		ref = 0
+		while not isinstance(args[ref], pandas.DataFrame):
+			ref += 1
+		ix = args[ref].index
+		return pandas.concat([pandas.DataFrame(a, index=ix) for a in args], axis=1)
+	return numpy.concatenate(args, axis=1)
+
+
+
 class LinearRegression(_sklearn_LinearRegression):
 
 	def fit(self, X, y, sample_weight=None):
