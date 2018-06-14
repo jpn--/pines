@@ -1,21 +1,20 @@
 
 
-from . import egnyte as pe
-import re
 import time
-import json
 import pandas
 import os
-from .logger import flogger
 from dask.distributed import Client as _Client, Future
 from distributed.core import rpc as _rpc
 
 from .timesize import timesize
 from .counter import Counter
 
-clog = flogger(label='CLUSTER')
 
-clog("this is cluster log")
+def heavy_logging():
+	from .logger import flogger
+	clog = flogger(label='CLUSTER')
+	clog("this is cluster log")
+	return clog
 
 from .hardware_info import node, processor_name
 _computer = node()
@@ -77,6 +76,7 @@ class Client(_Client):
 		-------
 
 		"""
+		super().retire_workers()
 		def retirements(w, dask_scheduler=None):
 			dask_scheduler.retire_workers(workers=w)
 		self.run_on_scheduler(retirements, workers_to_retire)
