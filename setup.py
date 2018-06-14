@@ -16,7 +16,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='pines',
-    version='2.85',
+    version='2.86',
 
     description='A toolkit for various purposes',
     long_description=long_description,
