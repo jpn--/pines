@@ -114,23 +114,24 @@ def ipython_status(magic_matplotlib=True):
 
 _i = Info()
 
-if 'IPython' in ipython_status():
-    from IPython.display import display
-    try:
-        if 'larch' not in sys.modules and 'larch4' not in sys.modules:
-            from .styles import stylesheet
-            stylesheet()
-            display(_i)
-    except:
+def show():
+    if 'IPython' in ipython_status():
+        from IPython.display import display
+        try:
+            if 'larch' not in sys.modules and 'larch4' not in sys.modules:
+                from .styles import stylesheet
+                stylesheet()
+                display(_i)
+        except:
+            if 'larch' not in sys.modules and 'larch4' not in sys.modules:
+                print(repr(_i))
+            jupyter_active = False
+        else:
+            jupyter_active = True
+    else:
+        jupyter_active = False
         if 'larch' not in sys.modules and 'larch4' not in sys.modules:
             print(repr(_i))
-        jupyter_active = False
-    else:
-        jupyter_active = True
-else:
-    jupyter_active = False
-    if 'larch' not in sys.modules and 'larch4' not in sys.modules:
-        print(repr(_i))
 
 ## most common items here
 
