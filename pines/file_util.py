@@ -181,3 +181,58 @@ def get_headers(filename, delim=','):
 			firstline = f.readline()
 	firstline = firstline.strip()
 	return firstline.split(delim)
+
+
+
+
+def xref(filename, from_file=None):
+	"""Platform agnostic manual symbolic linking."""
+
+	# First, if the file itself exists, use that file.
+	if os.path.exists(filename):
+		return filename
+
+	directory, basename = os.path.split(filename)
+
+	x1 = filename+".xref.txt"
+
+
+	# Then look for a file-specific xref
+	if os.path.exists(x1):
+
+		# Extract the content of the xref file
+		with open(x1, 'r') as f:
+			alt_file = f.read()
+
+		# Direct return of ref file if it is an absolute path and it exists
+		if os.path.isabs(alt_file):
+			if os.path.exists(alt_file):
+				return alt_file
+			else:
+				raise FileNotFoundError(alt_file)
+
+		else:
+			# it is a relative path
+			alt_path = os.path.normpath(os.path.join(directory, alt_file))
+			if from_file:
+				return xref(alt_path, from_file=x1+"\n             from: "+from_file)
+			return xref(alt_path, from_file=x1)
+
+	x2d = os.path.join(directory, '_.xref.txt')
+
+	# Then look for a dir-based xref
+	if os.path.exists(x2d):
+
+		# Extract the content of the xref file
+		with open(x2d, 'r') as f:
+			alt_dir = f.read()
+
+		x2 = os.path.normpath(os.path.join(directory, alt_dir, basename))
+		if from_file:
+			return xref(x2, from_file=x2d + "\n             from: " + from_file)
+		return xref(x2, from_file=x2d)
+
+	if from_file:
+		raise FileNotFoundError(filename+"\n             from: "+from_file)
+	raise FileNotFoundError(filename)
+
