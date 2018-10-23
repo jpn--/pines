@@ -3,6 +3,20 @@ import pandas
 import numpy
 import matplotlib
 import matplotlib.pyplot as plt
+import seaborn as sns
+
+def color_palette_alpha(palatte='Reds', low_alpha=0.0, high_alpha=1.0):
+	c = sns.color_palette(palatte)
+	from matplotlib.colors import LinearSegmentedColormap
+	return LinearSegmentedColormap.from_list(
+		name=palatte+"_gen",
+		colors=[
+			(*i, j)
+			for i,j in zip(
+				c, numpy.linspace(low_alpha, high_alpha, len(c))
+			)
+		]
+	)
 
 from geopandas import read_file # convenience
 
@@ -11,7 +25,9 @@ class Map:
 				 center=(None,None), extent=(None,None),
 				 xlim=None, ylim=None,
 				 xticks=None, yticks=None,
-				 title=None, bgcolor=None):
+				 title=None, bgcolor=None,
+				 height=None, width=None,
+				 frame=None):
 		fig, ax = plt.subplots()
 		ax.set_aspect('equal')
 
@@ -43,11 +59,19 @@ class Map:
 
 		self.set_title(title)
 
+		if height is not None:
+			self.fig.set_figheight(height)
+		if width is not None:
+			self.fig.set_figwidth(width)
+
+		if frame is not None:
+			self.ax.set_frame_on(frame)
 
 	def set_title(self, title):
 		self._title = title
 		if title is not None:
 			self.ax.set_title(title)
+		return self
 
 	def __repr__(self):
 		if self._title:
@@ -111,6 +135,62 @@ class Map:
 		)
 		return self
 
+	def kdeplot(self, lat, lon, gridsize=100, bw=.01, legend=False, cmap=None, palatte="Reds", **kwargs):
+		from matplotlib.colors import LinearSegmentedColormap
+		import seaborn as sns
+		sns.kdeplot(
+			lon,
+			lat,
+			clip=(
+				self.ax.get_xlim(),
+				self.ax.get_ylim(),
+			),
+			ax=self.ax,
+			shade=True,
+			gridsize=gridsize,
+			bw=bw,
+			shade_lowest=False,
+			cmap= color_palette_alpha(palatte) if cmap is None else cmap,
+			# LinearSegmentedColormap.from_list('name', [(1, 0, 0, 0), (1, 0, 0, 1/3), (1, 0, 0, 2/3), (0, 1, 0, 1)]),
+			legend=legend,
+			**kwargs
+		)
+		return self
+
+	def wkdeplot(self, lat, lon, wgt, gridsize=100, bw=.01, legend=False, palatte="Reds", cmap=None, **kwargs):
+
+		from sklearn.neighbors import KernelDensity
+		from matplotlib.colors import LinearSegmentedColormap
+
+		Xtrain = numpy.vstack([
+			lat,
+			lon]
+		).T
+
+		X, Y = numpy.meshgrid(
+			numpy.linspace(*self.ax.get_xlim(), gridsize),
+			numpy.linspace(*self.ax.get_ylim(), gridsize),
+		)
+		xy = numpy.vstack([Y.ravel(), X.ravel()]).T
+
+		kde = KernelDensity(bandwidth=bw,
+							#metric='haversine',
+							kernel='gaussian',
+							algorithm='ball_tree')
+		kde.fit(Xtrain, sample_weight=wgt)
+		Z = kde.score_samples(xy)
+		Z = Z.reshape(X.shape)
+		levels = numpy.linspace(0, Z.max(), 25)
+
+		if cmap is None:
+			cmap= color_palette_alpha(palatte)
+
+		self.ax.contourf(
+			X, Y, Z,
+			levels=levels,
+			cmap=cmap,
+		)
+		return self
 
 class MapMaker:
 	def __init__(self, *args, **kwargs):
