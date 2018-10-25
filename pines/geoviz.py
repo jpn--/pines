@@ -5,7 +5,16 @@ import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+local_palattes = {
+	'radar': ['deep purple', 'deep green', 'green', 'green', 'yellow', 'orange',]
+}
+
+
+
 def color_palette_alpha(palatte='Reds', low_alpha=0.0, high_alpha=1.0):
+
+	if palatte in local_palattes:
+		return color_list_alpha(local_palattes[palatte], low_alpha=low_alpha, high_alpha=high_alpha, name=palatte)
 	c = sns.color_palette(palatte)
 	from matplotlib.colors import LinearSegmentedColormap
 	return LinearSegmentedColormap.from_list(
@@ -17,6 +26,28 @@ def color_palette_alpha(palatte='Reds', low_alpha=0.0, high_alpha=1.0):
 			)
 		]
 	)
+
+
+def color_list_alpha(colorlist=(), low_alpha=0.0, high_alpha=1.0, name="_gen"):
+	if colorlist==():
+		colorlist = ['deep purple', 'deep green', 'green', 'green', 'yellow', 'orange',]
+	c = [sns.colors.xkcd_rgb[i] for i in colorlist]
+	from matplotlib.colors import LinearSegmentedColormap
+	return LinearSegmentedColormap.from_list(
+		name=name,
+		colors=[
+			(int(i[1:3],16)/256, int(i[3:5],16)/256, int(i[5:7],16)/256, j)
+			for i,j in zip(
+				c, numpy.linspace(low_alpha, high_alpha, len(c))
+			)
+		]
+	)
+
+local_cmaps = {
+	k: color_list_alpha(local_palattes[k], 0.0,1.0,k)
+	for k in local_palattes
+}
+
 
 from geopandas import read_file # convenience
 
@@ -135,8 +166,14 @@ class Map:
 		)
 		return self
 
-	def kdeplot(self, lat, lon, gridsize=100, bw=.01, legend=False, cmap=None, palatte="Reds", **kwargs):
-		from matplotlib.colors import LinearSegmentedColormap
+	def kdeplot(self, lat, lon, gridsize=100, bw=.01, legend=False, cmap=None, palatte="Reds", clist=None, **kwargs):
+
+		if cmap is None:
+			if clist is None:
+				cmap = color_palette_alpha(palatte)
+			else:
+				cmap = color_list_alpha(clist)
+
 		import seaborn as sns
 		sns.kdeplot(
 			lon,
@@ -150,17 +187,22 @@ class Map:
 			gridsize=gridsize,
 			bw=bw,
 			shade_lowest=False,
-			cmap= color_palette_alpha(palatte) if cmap is None else cmap,
+			cmap=cmap,
 			# LinearSegmentedColormap.from_list('name', [(1, 0, 0, 0), (1, 0, 0, 1/3), (1, 0, 0, 2/3), (0, 1, 0, 1)]),
 			legend=legend,
 			**kwargs
 		)
 		return self
 
-	def wkdeplot(self, lat, lon, wgt, gridsize=100, bw=.01, legend=False, palatte="Reds", cmap=None, **kwargs):
+	def wkdeplot(self, lat, lon, wgt, gridsize=100, bw=.01, legend=False, palatte="Reds", cmap=None, clist=None, **kwargs):
 
 		from sklearn.neighbors import KernelDensity
-		from matplotlib.colors import LinearSegmentedColormap
+		if cmap is None:
+			if clist is None:
+				cmap = color_palette_alpha(palatte)
+			else:
+				cmap = color_list_alpha(clist)
+
 
 		Xtrain = numpy.vstack([
 			lat,
