@@ -182,7 +182,15 @@ def get_headers(filename, delim=','):
 	firstline = firstline.strip()
 	return firstline.split(delim)
 
-
+def findfile(f, basedir=None):
+	if basedir is None:
+		basedir = os.getcwd()
+	cwd = basedir
+	while not os.path.exists(os.path.join(cwd,f)):
+		cwd, dropped = os.path.split(cwd)
+		if dropped=='':
+			raise FileNotFoundError(basedir+"/~~~/"+f)
+	return os.path.join(cwd,f)
 
 
 def xref(filename, from_file=None):
