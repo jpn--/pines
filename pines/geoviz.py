@@ -1,6 +1,7 @@
 import geopandas as gpd
 import pandas
 import numpy
+import os
 import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -256,3 +257,22 @@ def reduce_coordinate_precision_of_shapefile(in_filename, *out_filename, **kwarg
 		gdf.loc[xx, 'geometry'] = shape(geojson)
 
 	gdf.to_file(*out_filename, **kwargs)
+
+
+def get_distance_matrix(gdf, id_col, filename=None):
+	if filename is not None and os.path.exists(filename):
+		return pandas.read_pickle(filename)
+	distance_matrix = pandas.DataFrame(
+		data=0,
+		index=gdf[id_col],
+		columns=gdf[id_col],
+		dtype=numpy.float64,
+	)
+	for i in range(len(gdf)):
+		distance_matrix.values[:,i] = gdf.centroid.distance(gdf.centroid[i])
+	distance_matrix = distance_matrix.sort_index(0).sort_index(1)
+	if filename is not None and not os.path.exists(filename):
+		os.makedirs(os.path.dirname(filename), exist_ok=True)
+		distance_matrix.to_pickle(filename)
+	return distance_matrix
+
