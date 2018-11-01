@@ -111,7 +111,34 @@ class Map:
 		else:
 			return f"<pines.geoviz.Map: Untitled>"
 
-	def choropleth(self, gdf, column, cmap=None, legend=True, vmin=None, vmax=None, labels=None, **kwargs):
+	def get_png(self, *args, **kwargs):
+		import io
+		buf = io.BytesIO()
+		kwargs.pop('format', None)
+		bbox_inches = kwargs.pop('bbox_inches', 'tight')
+		self.fig.savefig(buf, format='png', bbox_inches=bbox_inches, *args, **kwargs)
+		return buf.getvalue()
+
+	def choropleth(
+			self,
+			gdf:gpd.GeoDataFrame,
+			column,
+			cmap=None,
+			legend=True,
+			vmin=None,
+			vmax=None,
+			labels=None,
+			colorbar_fraction = 0.046,
+			colorbar_pad = 0.04,
+			colorbar_shrink = 0.75,
+			**kwargs,
+	):
+		if legend == 'manual':
+			manual_legend = True
+			legend = False
+		else:
+			manual_legend = False
+
 		y = gdf.plot(
 			ax=self.ax,
 			column=column,
@@ -121,6 +148,17 @@ class Map:
 			vmax=vmax,
 			**kwargs
 		)
+
+		if manual_legend:
+			mn = gdf[column].min() if vmin is None else vmin
+			mx = gdf[column].max() if vmax is None else vmax
+			from matplotlib.colors import Normalize
+			from matplotlib import cm
+			norm = Normalize(vmin=mn, vmax=mx)
+			n_cmap = cm.ScalarMappable(norm=norm, cmap=cmap)
+			n_cmap.set_array([])
+			self.fig.colorbar(n_cmap, fraction=colorbar_fraction, pad=colorbar_pad, shrink=colorbar_shrink)
+
 		if labels is not None:
 			from seaborn.utils import relative_luminance
 			areacolors = y.collections[0].get_facecolors()
@@ -234,6 +272,42 @@ class Map:
 			cmap=cmap,
 		)
 		return self
+
+	def points(self, gdf, color='#BB0000', plotnumber=0, **kwargs):
+
+		# if self.grid_width == 1 and self.grid_height == 1:
+		# 	ax = self.axes
+		# else:
+		# 	ax = self.axes.ravel()[plotnumber]
+
+		gdf.plot(
+			ax=self.ax,
+			color=color,
+			**kwargs
+		)
+
+		return self
+
+
+	def colored_points(self, gdf, column, cmap='vidiris', plotnumber=0, **kwargs):
+
+		# if self.grid_width == 1 and self.grid_height == 1:
+		# 	ax = self.axes
+		# else:
+		# 	ax = self.axes.ravel()[plotnumber]
+
+		gdf.plot(
+			ax=self.ax,
+			column=column,
+			cmap=cmap,
+			**kwargs
+		)
+
+		return self
+
+
+
+
 
 class MapMaker:
 	def __init__(self, *args, **kwargs):
