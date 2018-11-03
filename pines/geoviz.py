@@ -111,12 +111,14 @@ class Map:
 		else:
 			return f"<pines.geoviz.Map: Untitled>"
 
-	def get_png(self, *args, **kwargs):
+	def get_png(self, *args, close_after=True, **kwargs):
 		import io
 		buf = io.BytesIO()
 		kwargs.pop('format', None)
 		bbox_inches = kwargs.pop('bbox_inches', 'tight')
 		self.fig.savefig(buf, format='png', bbox_inches=bbox_inches, *args, **kwargs)
+		if close_after:
+			plt.close(self.fig.number)
 		return buf.getvalue()
 
 	def choropleth(
