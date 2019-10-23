@@ -25,7 +25,7 @@ class Nanny(_Nanny):
 		self.handlers['change_ncores'] = self.change_ncores
 
 
-def new_worker(scheduler=None, name=None, cfg=None, gui_loop_callback=None, resources=None, **kwargs):
+async def _new_worker(scheduler=None, name=None, cfg=None, gui_loop_callback=None, resources=None, **kwargs):
 	global _worker_local_dir
 	if cfg is None:
 		cfg = configure.check_config(['cluster.worker_log', 'cluster.scheduler'],
@@ -44,8 +44,8 @@ def new_worker(scheduler=None, name=None, cfg=None, gui_loop_callback=None, reso
 	if scheduler is None:  # still...
 		raise ValueError('no scheduler known, set one in pines.configure .cluster')
 
-	from tornado.ioloop import IOLoop
-	from threading import Thread
+	# from tornado.ioloop import IOLoop
+	# from threading import Thread
 
 	if name is None:
 		if 'worker_name' in cfg.cluster:
@@ -54,9 +54,9 @@ def new_worker(scheduler=None, name=None, cfg=None, gui_loop_callback=None, reso
 			import socket
 			name = socket.getfqdn()
 
-	loop = IOLoop.current()
-	t = Thread(target=loop.start, daemon=True)
-	t.start()
+	# loop = IOLoop.current()
+	# t = Thread(target=loop.start, daemon=True)
+	# t.start()
 
 	scheduler_location = f'tcp://{scheduler}:8786'
 	logging.getLogger('distributed').info(f"starting worker {name} for {scheduler_location}")
@@ -64,20 +64,22 @@ def new_worker(scheduler=None, name=None, cfg=None, gui_loop_callback=None, reso
 	if resources:
 		logging.getLogger('distributed').info(f"worker {name} has resources {str(resources)}")
 
-	w = Nanny(scheduler_location, loop=loop, name=name, resources=resources, **kwargs)
-	w.start()  # choose randomly assigned port
+	w = Nanny(scheduler_location, name=name, resources=resources, **kwargs)
 
 	w.cfg = cfg
 
-	_worker_local_dir = w.local_dir
+	_worker_local_dir = w.local_directory
 
-	if gui_loop_callback is not None:
-		gui_loop_callback(w, cfg)
+	# if gui_loop_callback is not None:
+	# 	gui_loop_callback(w, cfg)
 
-	t.join()
+	await w.start()  # choose randomly assigned port
 
 	logging.getLogger('distributed').critical(f"ending worker {name} for {scheduler_location}")
 
+def new_worker(*args, **kwargs):
+	import asyncio
+	asyncio.run(_new_worker(*args, **kwargs))
 
 def receive_tar_package(s, packagename=None):
 	global _worker_local_dir
