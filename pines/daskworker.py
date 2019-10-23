@@ -74,8 +74,9 @@ async def _new_worker(scheduler=None, name=None, cfg=None, gui_loop_callback=Non
 	# 	gui_loop_callback(w, cfg)
 
 	await w.start()  # choose randomly assigned port
+	await w.finished()
 
-	logging.getLogger('distributed').critical(f"ending worker {name} for {scheduler_location}")
+	logging.getLogger('distributed').critical(f"ending nanny {name} for {scheduler_location}")
 
 def new_worker(*args, **kwargs):
 	import asyncio
