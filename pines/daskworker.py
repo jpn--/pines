@@ -16,9 +16,9 @@ class Nanny(_Nanny):
 		new_ncores = kwarg.pop('new_ncores')
 		logging.getLogger('distributed').info(f"changing ncores to {new_ncores}")
 		if new_ncores is not None:
-			self.ncores = new_ncores
+			self.nthreads = new_ncores
 			if self.process:
-				self.process.worker_kwargs['ncores'] = new_ncores
+				self.process.worker_kwargs['nthreads'] = new_ncores
 
 	def __init__(self, *arg, **kwarg):
 		super().__init__(*arg, **kwarg)

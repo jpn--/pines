@@ -45,18 +45,20 @@ class Client(_Client):
 	def worker_status(self):
 		worker_info = self.scheduler_info()['workers']
 		now = time.time()
-		worker_data = [(
-			ip,
-			i['name'] if 'name' in i else "n/a",
-			i['ncores'] if 'ncores' in i else -999,
-			i['executing'] if 'executing' in i else -999,
-			i['ready'] if 'ready' in i else -999,
-			i['in_memory'] if 'in_memory' in i else -999,
-			timesize(now-i['last-seen'])+" ago" if 'last-seen' in i else "n/a",
-			timesize(now-i['last-task'])+" ago" if 'last-task' in i else "n/a",
-		) for ip,i in worker_info.items()]
+		worker_data = [
+			(
+				ip,
+				i['name'] if 'name' in i else "n/a",
+				i.get('nthreads',-999),
+				i.get('metrics', {}).get('executing',-999),
+				i.get('metrics', {}).get('ready',-999),
+				i.get('metrics', {}).get('in_memory',-999),
+				timesize(now-i['last_seen'])+" ago" if 'last_seen' in i else "n/a",
+			)
+			for ip, i in worker_info.items()
+		]
 		result = pandas.DataFrame(
-			columns=['address','name','ncores','executing','ready','in-memory','last-seen','last-task'],
+			columns=['address','name','ncores','executing','ready','in-memory','last-seen',],
 			data=worker_data
 		)
 		return result
@@ -64,22 +66,22 @@ class Client(_Client):
 	def workers(self):
 		return set(self.scheduler_info()['workers'].keys())
 
-	def retire_workers(self, workers_to_retire):
-		"""
-		Cleanly retire a worker, moving saved results to other workers first.
-
-		Parameters
-		----------
-		workers_to_retire
-
-		Returns
-		-------
-
-		"""
-		super().retire_workers()
-		def retirements(w, dask_scheduler=None):
-			dask_scheduler.retire_workers(workers=w)
-		self.run_on_scheduler(retirements, workers_to_retire)
+	# def retire_workers(self, workers_to_retire):
+	# 	"""
+	# 	Cleanly retire a worker, moving saved results to other workers first.
+	#
+	# 	Parameters
+	# 	----------
+	# 	workers_to_retire
+	#
+	# 	Returns
+	# 	-------
+	#
+	# 	"""
+	# 	super().retire_workers()
+	# 	def retirements(w, dask_scheduler=None):
+	# 		dask_scheduler.retire_workers(workers=w)
+	# 	self.run_on_scheduler(retirements, workers_to_retire)
 
 	def change_worker_ncores(self, worker, new_ncores):
 		"""
