@@ -9,7 +9,7 @@ except ImportError:
 	except ImportError:
 		from pip._internal import main
 
-def pip_install(package_names=None, private_repo="camtdm01.camsys.local"):
+def pip_install(package_names=None, private_repo="camtdm01.camsys.local", subproc=True):
 	if package_names is None:
 		if len(sys.argv)>0 and (('pines_pip' in sys.argv[0]) or ('pines-pip' in sys.argv[0])):
 			if len(sys.argv)>1 and sys.argv[1]=='install': # ignore install command, it is implied here
@@ -22,10 +22,17 @@ def pip_install(package_names=None, private_repo="camtdm01.camsys.local"):
 		print("NO PACKAGES GIVEN")
 	else:
 		for pkg in pkgs:
-			result = main(["install", "--upgrade", f'--index-url=http://{private_repo}', f'--trusted-host={private_repo}', pkg])
-			if result!=0:
-				# failure
-				raise ModuleNotFoundError(pkg)
+			if subproc:
+				import subprocess
+				result = subprocess.call(["pip", "install", "--upgrade", f'--index-url=http://{private_repo}', f'--trusted-host={private_repo}', pkg])
+				if result!=0:
+					# failure
+					raise ModuleNotFoundError(pkg)
+			else:
+				result = main(["install", "--upgrade", f'--index-url=http://{private_repo}', f'--trusted-host={private_repo}', pkg])
+				if result!=0:
+					# failure
+					raise ModuleNotFoundError(pkg)
 
 def _pip_install_entry(args=None):
 	return pip_install()
