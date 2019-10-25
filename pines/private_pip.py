@@ -1,6 +1,14 @@
 import pip, sys, os
 from distutils.dir_util import copy_tree
 
+try:
+	from pip import main
+except ImportError:
+	try:
+		from pip._internal.main import main
+	except ImportError:
+		from pip._internal import main
+
 def pip_install(package_names=None, private_repo="camtdm01.camsys.local"):
 	if package_names is None:
 		if len(sys.argv)>0 and (('pines_pip' in sys.argv[0]) or ('pines-pip' in sys.argv[0])):
@@ -14,7 +22,7 @@ def pip_install(package_names=None, private_repo="camtdm01.camsys.local"):
 		print("NO PACKAGES GIVEN")
 	else:
 		for pkg in pkgs:
-			result = pip.main(["install", "--upgrade", f'--index-url=http://{private_repo}', f'--trusted-host={private_repo}', pkg])
+			result = main(["install", "--upgrade", f'--index-url=http://{private_repo}', f'--trusted-host={private_repo}', pkg])
 			if result!=0:
 				# failure
 				raise ModuleNotFoundError(pkg)
@@ -40,6 +48,6 @@ def pip_info(package_name):
 	import sys
 	old_stdout = sys.stdout
 	sys.stdout = mystdout = StringIO()
-	pip.main(['show',package_name])
+	main(['show',package_name])
 	sys.stdout = old_stdout
 	return mystdout.getvalue()
